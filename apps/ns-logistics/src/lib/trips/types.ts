@@ -11,9 +11,6 @@ export type TripLocation =
   | "Singapore"
   | "JB Sentral";
 
-/** Offering seats/vehicle vs looking for companions / a ride. */
-export type TripIntent = "offer" | "request";
-
 /**
  * open — tentative; time may still move
  * confirmed — host locked departure
@@ -29,13 +26,16 @@ export type TimeWindow = "morning" | "afternoon" | "evening" | "night";
 
 export type TripCorridor = "airport" | "singapore" | "local";
 
+/** How people move — multi-select; both = either/flexible. Empty = unspecified. */
+export type TransportMode = "car" | "bus";
+
 /**
  * Lightweight ride post. Route + when + how are primary;
  * notes/meeting/seats live in an accordion. Discord is opt-in (mock for now).
+ * No offer/request split — one trip, optional seats, optional transport.
  */
 export type Trip = {
   id: string;
-  intent: TripIntent;
   status: TripStatus;
   source: TripLocation;
   destination: TripLocation;
@@ -43,6 +43,8 @@ export type Trip = {
   endsAt: string;
   timePrecision: TimePrecision;
   timeLabel: string;
+  /** Empty = unspecified; both car+bus = either is fine. */
+  transport: TransportMode[];
   meetingPoint: string;
   notes: string;
   host: TripPerson;
@@ -55,6 +57,16 @@ export type Trip = {
    */
   discordThreadUrl: string | null;
 };
+
+export function formatTransport(transport: TransportMode[]): string | null {
+  if (transport.length === 0) return null;
+  const hasCar = transport.includes("car");
+  const hasBus = transport.includes("bus");
+  if (hasCar && hasBus) return "Car / bus";
+  if (hasCar) return "Car";
+  if (hasBus) return "Bus";
+  return null;
+}
 
 export type TimeMode = "upcoming" | "past";
 

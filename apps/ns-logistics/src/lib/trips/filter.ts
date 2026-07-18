@@ -94,7 +94,10 @@ function matchesQuery(trip: Trip, query: string): boolean {
     trip.meetingPoint,
     trip.notes,
     trip.timeLabel,
-    trip.intent,
+    trip.transport.join(" "),
+    trip.transport.includes("car") && trip.transport.includes("bus")
+      ? "either flexible"
+      : "",
     trip.status,
     trip.host.name,
     ...trip.riders.map((g) => g.name),

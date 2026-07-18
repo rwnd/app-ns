@@ -1,5 +1,5 @@
 import { formatTripWhen } from "@/lib/trips/dates";
-import type { Trip } from "@/lib/trips/types";
+import { formatTransport, type Trip } from "@/lib/trips/types";
 
 /**
  * Until a Discord bot is wired, "Share to Discord" only stores a mock thread URL.
@@ -27,8 +27,8 @@ export function discordStarterMessage(trip: Trip): string {
     trip.capacity === null
       ? "companions welcome"
       : `${trip.capacity} seat${trip.capacity === 1 ? "" : "s"}`;
-  const how =
-    trip.intent === "offer" ? `Offering · ${seats}` : "Looking for a ride";
+  const transport = formatTransport(trip.transport);
+  const how = transport ? `${transport} · ${seats}` : seats;
   const notes = trip.notes.trim() ? `\n${trip.notes.trim()}` : "";
   return [
     `**${trip.source} → ${trip.destination}**`,

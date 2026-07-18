@@ -1,11 +1,17 @@
 import type {
   TimeWindow,
+  TransportMode,
   TripCorridor,
   TripLocation,
 } from "@/lib/trips/types";
 
 export const MAX_PLAN_DAYS = 45;
 export const PAST_VISIBLE_DAYS = 7;
+
+export const TRANSPORT_MODES: { id: TransportMode; label: string }[] = [
+  { id: "car", label: "Car" },
+  { id: "bus", label: "Bus" },
+];
 
 export const LOCATIONS: TripLocation[] = [
   "Network School",

@@ -46,7 +46,6 @@ export function createMockTrips(now = new Date()): Trip[] {
   const trips: Trip[] = [
     {
       id: "t-today-airport",
-      intent: "offer",
       status: "confirmed",
       source: "Network School",
       destination: "Changi Airport",
@@ -54,6 +53,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(today, 12, 30).toISOString(),
       timePrecision: "exact",
       timeLabel: "",
+      transport: ["car"],
       meetingPoint: "NS Lobby",
       notes: "Van — 2 large bags ok.",
       host: people.artem,
@@ -64,7 +64,6 @@ export function createMockTrips(now = new Date()): Trip[] {
     },
     {
       id: "t-sg-return-flex",
-      intent: "request",
       status: "open",
       source: "Singapore",
       destination: "Network School",
@@ -72,6 +71,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(sunday, 23, 0).toISOString(),
       timePrecision: "flexible",
       timeLabel: "Saturday evening or Sunday night",
+      transport: ["car", "bus"],
       meetingPoint: "",
       notes: "Happy to share Grab / bus.",
       host: people.dan,
@@ -81,7 +81,6 @@ export function createMockTrips(now = new Date()): Trip[] {
     },
     {
       id: "t-tomorrow-sg",
-      intent: "offer",
       status: "confirmed",
       source: "Network School",
       destination: "Singapore",
@@ -89,6 +88,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(tomorrow, 21, 0).toISOString(),
       timePrecision: "exact",
       timeLabel: "",
+      transport: ["car"],
       meetingPoint: "JB Sentral pickup",
       notes: "Transit via JB. Bring passport.",
       host: people.maya,
@@ -99,7 +99,6 @@ export function createMockTrips(now = new Date()): Trip[] {
     },
     {
       id: "t-tomorrow-return",
-      intent: "offer",
       status: "open",
       source: "Changi Airport",
       destination: "Network School",
@@ -107,6 +106,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(tomorrow, 16, 45).toISOString(),
       timePrecision: "exact",
       timeLabel: "",
+      transport: ["car"],
       meetingPoint: "T3 Arrival Hall",
       notes: "Landing ~2:40pm. Room for 2 more.",
       host: people.leo,
@@ -116,7 +116,6 @@ export function createMockTrips(now = new Date()): Trip[] {
     },
     {
       id: "t-cohort-arrival",
-      intent: "request",
       status: "open",
       source: "Changi Airport",
       destination: "Network School",
@@ -124,6 +123,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(inTwo, 23, 0).toISOString(),
       timePrecision: "flexible",
       timeLabel: "Evening — landing window flexible",
+      transport: ["bus", "car"],
       meetingPoint: "",
       notes: "Heading straight to Forest City after landing.",
       host: people.hari,
@@ -133,7 +133,6 @@ export function createMockTrips(now = new Date()): Trip[] {
     },
     {
       id: "t-in-two-jb",
-      intent: "offer",
       status: "open",
       source: "Network School",
       destination: "JB Sentral",
@@ -141,6 +140,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(inTwo, 16, 0).toISOString(),
       timePrecision: "exact",
       timeLabel: "",
+      transport: ["bus"],
       meetingPoint: "NS Bike rack",
       notes: "Cold chain bags welcome.",
       host: people.priya,
@@ -150,7 +150,6 @@ export function createMockTrips(now = new Date()): Trip[] {
     },
     {
       id: "t-today-eco",
-      intent: "offer",
       status: "open",
       source: "Network School",
       destination: "Eco Botanica",
@@ -158,6 +157,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(today, 19, 30).toISOString(),
       timePrecision: "exact",
       timeLabel: "",
+      transport: ["bus"],
       meetingPoint: "NS Gate",
       notes: "Casual pace. Back before dinner.",
       host: people.sofia,
@@ -167,7 +167,6 @@ export function createMockTrips(now = new Date()): Trip[] {
     },
     {
       id: "t-yesterday-eco",
-      intent: "offer",
       status: "confirmed",
       source: "Network School",
       destination: "Eco Botanica",
@@ -175,6 +174,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(yesterday, 18, 0).toISOString(),
       timePrecision: "exact",
       timeLabel: "",
+      transport: ["bus"],
       meetingPoint: "NS Gate",
       notes: "Bring bug spray.",
       host: people.jade,
@@ -184,7 +184,6 @@ export function createMockTrips(now = new Date()): Trip[] {
     },
     {
       id: "t-three-ago-airport",
-      intent: "offer",
       status: "confirmed",
       source: "Changi Airport",
       destination: "Network School",
@@ -192,6 +191,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(threeDaysAgo, 14, 45).toISOString(),
       timePrecision: "exact",
       timeLabel: "",
+      transport: ["car"],
       meetingPoint: "T1 Arrival",
       notes: "Completed.",
       host: people.artem,
@@ -201,7 +201,6 @@ export function createMockTrips(now = new Date()): Trip[] {
     },
     {
       id: "t-ten-ago-sg",
-      intent: "offer",
       status: "confirmed",
       source: "Network School",
       destination: "Singapore",
@@ -209,6 +208,7 @@ export function createMockTrips(now = new Date()): Trip[] {
       endsAt: atHour(tenDaysAgo, 20, 0).toISOString(),
       timePrecision: "exact",
       timeLabel: "",
+      transport: ["car", "bus"],
       meetingPoint: "NS Lobby",
       notes: "Outside 7-day UI window.",
       host: people.maya,
@@ -222,7 +222,6 @@ export function createMockTrips(now = new Date()): Trip[] {
   const soonEnd = new Date(soon.getTime() + 75 * 60 * 1000);
   trips.push({
     id: "t-soon-shuttle",
-    intent: "offer",
     status: "confirmed",
     source: "Network School",
     destination: "JB Sentral",
@@ -230,6 +229,7 @@ export function createMockTrips(now = new Date()): Trip[] {
     endsAt: soonEnd.toISOString(),
     timePrecision: "exact",
     timeLabel: "",
+    transport: ["car"],
     meetingPoint: "NS Lobby",
     notes: "Leaves in about 90 minutes.",
     host: people.nate,

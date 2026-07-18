@@ -6,6 +6,7 @@ import {
   LOCATIONS,
   MAX_PLAN_DAYS,
   TIME_WINDOWS,
+  TRANSPORT_MODES,
 } from "@/lib/trips/constants";
 import {
   addDays,
@@ -19,8 +20,8 @@ import { isWithinPlanWindow } from "@/lib/trips/filter";
 import type {
   TimePrecision,
   TimeWindow,
+  TransportMode,
   Trip,
-  TripIntent,
   TripLocation,
   TripPerson,
 } from "@/lib/trips/types";
@@ -52,7 +53,6 @@ export function CreateTripModal({
   const maxDay = useMemo(() => toDateKey(addDays(new Date(), MAX_PLAN_DAYS)), []);
   const minDay = useMemo(() => toDateKey(new Date()), []);
 
-  const [intent, setIntent] = useState<TripIntent>("offer");
   const [source, setSource] = useState<TripLocation>("Network School");
   const [destination, setDestination] =
     useState<TripLocation>("Changi Airport");
@@ -60,6 +60,7 @@ export function CreateTripModal({
   const [startsAt, setStartsAt] = useState(defaultExactLocal);
   const [day, setDay] = useState(minDay);
   const [windowId, setWindowId] = useState<TimeWindow>("evening");
+  const [transport, setTransport] = useState<TransportMode[]>(["car"]);
   const [notes, setNotes] = useState("");
   const [meetingPoint, setMeetingPoint] = useState("");
   const [capacity, setCapacity] = useState<string>("");
@@ -73,6 +74,12 @@ export function CreateTripModal({
     if (!preset) return;
     setSource(preset.source);
     setDestination(preset.destination);
+  }
+
+  function toggleTransport(mode: TransportMode) {
+    setTransport((prev) =>
+      prev.includes(mode) ? prev.filter((m) => m !== mode) : [...prev, mode],
+    );
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -127,17 +134,14 @@ export function CreateTripModal({
     }
 
     const seats =
-      intent === "offer" && capacity.trim() !== ""
-        ? Math.max(1, Number(capacity))
-        : null;
-    if (intent === "offer" && capacity.trim() !== "" && Number.isNaN(seats)) {
+      capacity.trim() !== "" ? Math.max(1, Number(capacity)) : null;
+    if (capacity.trim() !== "" && Number.isNaN(seats)) {
       setError("Seats must be a number, or leave blank.");
       return;
     }
 
     const trip: Trip = {
       id: `t-${Date.now()}`,
-      intent,
       status: "open",
       source,
       destination,
@@ -145,6 +149,7 @@ export function CreateTripModal({
       endsAt: end.toISOString(),
       timePrecision: precision,
       timeLabel,
+      transport: [...transport],
       meetingPoint: meetingPoint.trim(),
       notes: notes.trim(),
       host,
@@ -158,6 +163,7 @@ export function CreateTripModal({
     setNotes("");
     setMeetingPoint("");
     setCapacity("");
+    setTransport(["car"]);
     setDetailsOpen(false);
     setStartsAt(defaultExactLocal());
     setError(null);
@@ -181,7 +187,7 @@ export function CreateTripModal({
               Post a trip
             </h2>
             <p className="mt-1 text-sm text-[var(--iron-500)]">
-              From → to, when, how. Discord share is optional later.
+              From → to, when, how you&apos;re going. Optional seats.
             </p>
           </div>
           <button
@@ -192,29 +198,6 @@ export function CreateTripModal({
           >
             ✕
           </button>
-        </div>
-
-        <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-[var(--iron-100)] p-1">
-          {(
-            [
-              ["offer", "Offering seats"],
-              ["request", "Looking for a ride"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setIntent(value)}
-              className={[
-                "rounded-full px-3 py-2 text-sm font-semibold transition",
-                intent === value
-                  ? "bg-white text-[var(--ns-ink)] shadow-sm"
-                  : "text-[var(--iron-500)]",
-              ].join(" ")}
-            >
-              {label}
-            </button>
-          ))}
         </div>
 
         <div className="space-y-3">
@@ -339,6 +322,35 @@ export function CreateTripModal({
             </div>
           )}
 
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-[var(--ns-ink)]">
+              Transport
+            </p>
+            <p className="mb-2 text-xs text-[var(--iron-400)]">
+              Pick one or both — both means either is fine. Leave none if open.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {TRANSPORT_MODES.map((mode) => {
+                const active = transport.includes(mode.id);
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => toggleTransport(mode.id)}
+                    className={[
+                      "rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                      active
+                        ? "bg-[var(--ns-ink)] text-white"
+                        : "bg-white text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-[var(--iron-50)]",
+                    ].join(" ")}
+                  >
+                    {mode.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={() => setDetailsOpen((v) => !v)}
@@ -350,19 +362,17 @@ export function CreateTripModal({
 
           {detailsOpen ? (
             <div className="space-y-3 rounded-xl bg-[var(--iron-50)] p-3">
-              {intent === "offer" ? (
-                <Field label="Seats">
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={capacity}
-                    onChange={(e) => setCapacity(e.target.value)}
-                    placeholder="Blank = no limit"
-                    className="field-input"
-                  />
-                </Field>
-              ) : null}
+              <Field label="Seats">
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={capacity}
+                  onChange={(e) => setCapacity(e.target.value)}
+                  placeholder="Blank = no limit"
+                  className="field-input"
+                />
+              </Field>
               <Field label="Notes">
                 <textarea
                   value={notes}

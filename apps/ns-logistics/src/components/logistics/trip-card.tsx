@@ -4,7 +4,13 @@ import { useState } from "react";
 import { formatTripTimePrefix } from "@/lib/trips/dates";
 import { DISCORD_THREADS_MOCK_ONLY } from "@/lib/trips/discord";
 import { isJoinable, seatsLeft } from "@/lib/trips/filter";
-import { tripStatusChip, type Trip, type TripPerson, type TripStatus } from "@/lib/trips/types";
+import {
+  formatTransport,
+  tripStatusChip,
+  type Trip,
+  type TripPerson,
+  type TripStatus,
+} from "@/lib/trips/types";
 
 type TripCardProps = {
   trip: Trip;
@@ -17,8 +23,7 @@ type TripCardProps = {
   flash?: string | null;
 };
 
-function howLine(trip: Trip): string | null {
-  if (trip.intent === "request") return "Looking";
+function seatsLine(trip: Trip): string | null {
   const left = seatsLeft(trip);
   if (trip.capacity === null) return null;
   if (left === null) return `${trip.capacity} seats`;
@@ -48,7 +53,8 @@ export function TripCard({
   const joined = trip.riders.some((g) => g.id === currentUserId);
   const showJoinControl = !isPast && !isHost && (joined || isJoinable(trip));
   const goingCount = trip.riders.length;
-  const seats = howLine(trip);
+  const seats = seatsLine(trip);
+  const transport = formatTransport(trip.transport);
   const chip = tripStatusChip(trip);
   const timePrefix = formatTripTimePrefix(trip);
   // Match "N going": riders only — not the host.
@@ -89,6 +95,7 @@ export function TripCard({
             ) : (
               <span className="trip-sub">No one yet</span>
             )}
+            {transport ? <span className="trip-sub">{transport}</span> : null}
             {seats ? <span className="trip-sub">{seats}</span> : null}
             {isHost ? <span className="trip-sub font-medium text-[var(--ns-ink)]">Yours</span> : null}
             {joined && !isHost ? (
@@ -149,6 +156,12 @@ export function TripCard({
             <span className="trip-details-label">Host</span>
             {trip.host.name}
           </p>
+          {transport ? (
+            <p>
+              <span className="trip-details-label">How</span>
+              {transport}
+            </p>
+          ) : null}
           {trip.meetingPoint ? (
             <p>
               <span className="trip-details-label">Meet</span>
