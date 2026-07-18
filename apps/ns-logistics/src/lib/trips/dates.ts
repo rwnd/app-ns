@@ -65,6 +65,27 @@ export function formatTimeRange(startsAt: string, endsAt: string): string {
   return `${start.toLocaleTimeString("en-US", opts)} – ${end.toLocaleTimeString("en-US", opts)}`;
 }
 
+export function formatClock(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Display when for ride posts — prefers human label for flexible times. */
+export function formatTripWhen(trip: {
+  startsAt: string;
+  endsAt: string;
+  timePrecision: "exact" | "flexible";
+  timeLabel: string;
+}): string {
+  if (trip.timeLabel.trim()) return trip.timeLabel.trim();
+  if (trip.timePrecision === "flexible") {
+    return formatTimeRange(trip.startsAt, trip.endsAt);
+  }
+  return formatClock(trip.startsAt);
+}
+
 export function formatDayLabel(date: Date, now = new Date()): string {
   const today = startOfDay(now);
   const target = startOfDay(date);

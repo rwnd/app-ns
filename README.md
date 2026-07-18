@@ -6,7 +6,9 @@ Monorepo for Network School apps.
 
 ### `ns-logistics`
 
-Coordinate shared trips to/from Network School (airport, Eco Botanica, Singapore, etc.).
+Ride board for shared trips to/from Network School (airport, Singapore, JB, Eco Botanica).
+
+**Product (from Discord coordination research):** list-first posts — not event RSVPs. Few clicks to **Post trip** or tap **I'm in**. Posts can be an **offer** (seats) or **request** (looking for a ride), with **exact** or **flexible** time. Status: open → confirmed / full / cancelled. No trip detail pages; Discord carries join/confirm notifications.
 
 **Stack:** Next.js (App Router) · React · TypeScript · Tailwind · Auth.js (Discord)
 

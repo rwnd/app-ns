@@ -1,6 +1,7 @@
 import {
   MAX_PLAN_DAYS,
   PAST_VISIBLE_DAYS,
+  tripCorridor,
 } from "@/lib/trips/constants";
 import {
   addDays,
@@ -9,34 +10,36 @@ import {
   startOfDay,
   toDateKey,
 } from "@/lib/trips/dates";
-import type {
-  Trip,
-  TripFilters,
-  TripStats,
-} from "@/lib/trips/types";
+import type { Trip, TripFilters, TripStats } from "@/lib/trips/types";
+
+export function tripEffectiveEnd(trip: Trip): Date {
+  return new Date(trip.endsAt);
+}
 
 export function isTripExpired(trip: Trip, now = new Date()): boolean {
-  return new Date(trip.endsAt).getTime() < now.getTime();
+  if (trip.status === "cancelled") {
+    return new Date(trip.startsAt).getTime() < now.getTime();
+  }
+  return tripEffectiveEnd(trip).getTime() < now.getTime();
 }
 
 export function isTripInNext24h(trip: Trip, now = new Date()): boolean {
+  if (trip.status === "cancelled") return false;
   const start = new Date(trip.startsAt).getTime();
-  const end = new Date(trip.endsAt).getTime();
+  const end = tripEffectiveEnd(trip).getTime();
   const nowMs = now.getTime();
   const in24h = nowMs + 24 * 60 * 60 * 1000;
-  // Happening now, or starting within the next 24 hours
   return end >= nowMs && start <= in24h;
 }
 
 export function isWithinPastUiWindow(trip: Trip, now = new Date()): boolean {
-  const end = new Date(trip.endsAt);
+  const end = tripEffectiveEnd(trip);
   const cutoff = addDays(startOfDay(now), -PAST_VISIBLE_DAYS);
   return end.getTime() < now.getTime() && end.getTime() >= cutoff.getTime();
 }
 
 export function isWithinPlanWindow(startsAt: Date, now = new Date()): boolean {
   if (Number.isNaN(startsAt.getTime())) return false;
-  // Floor "now" to the minute so datetime-local values (second-less) aren't rejected
   const nowFloor = new Date(now);
   nowFloor.setSeconds(0, 0);
   const max = endOfDay(addDays(now, MAX_PLAN_DAYS));
@@ -46,26 +49,36 @@ export function isWithinPlanWindow(startsAt: Date, now = new Date()): boolean {
   );
 }
 
+export function seatsLeft(trip: Trip): number | null {
+  if (trip.capacity === null) return null;
+  return Math.max(trip.capacity - trip.riders.length, 0);
+}
+
+export function isJoinable(trip: Trip, now = new Date()): boolean {
+  if (isTripExpired(trip, now)) return false;
+  if (trip.status === "cancelled" || trip.status === "full") return false;
+  const left = seatsLeft(trip);
+  if (left !== null && left <= 0) return false;
+  return true;
+}
+
 export function computeStats(trips: Trip[], now = new Date()): TripStats {
   let upcoming = 0;
   let inProgressNext24h = 0;
-  let expired = 0;
+  let open = 0;
 
   for (const trip of trips) {
-    if (isTripExpired(trip, now)) {
-      expired += 1;
-    } else {
-      upcoming += 1;
-    }
-    if (isTripInNext24h(trip, now)) {
-      inProgressNext24h += 1;
-    }
+    if (isTripExpired(trip, now)) continue;
+    if (trip.status === "cancelled") continue;
+    upcoming += 1;
+    if (trip.status === "open") open += 1;
+    if (isTripInNext24h(trip, now)) inProgressNext24h += 1;
   }
 
   return {
     upcoming,
     inProgressNext24h,
-    expired,
+    open,
     plannedTotal: trips.length,
   };
 }
@@ -80,8 +93,11 @@ function matchesQuery(trip: Trip, query: string): boolean {
     trip.destination,
     trip.meetingPoint,
     trip.notes,
+    trip.timeLabel,
+    trip.intent,
+    trip.status,
     trip.host.name,
-    ...trip.guests.map((g) => g.name),
+    ...trip.riders.map((g) => g.name),
     start.toLocaleDateString("en-US"),
     start.toLocaleDateString("en-US", {
       weekday: "long",
@@ -133,7 +149,6 @@ export function filterTrips(
     }
 
     if (filters.timeMode === "upcoming") {
-      // Don't list trips planned beyond the planning horizon in the main feed
       const start = new Date(trip.startsAt);
       const max = endOfDay(addDays(now, MAX_PLAN_DAYS));
       if (start.getTime() > max.getTime()) return false;
@@ -142,12 +157,10 @@ export function filterTrips(
     if (!matchesQuery(trip, filters.query)) return false;
     if (!matchesQuickRange(trip, filters.quickRange, now)) return false;
 
-    if (filters.source !== "all" && trip.source !== filters.source) return false;
-    if (
-      filters.destination !== "all" &&
-      trip.destination !== filters.destination
-    ) {
-      return false;
+    if (filters.corridor !== "all") {
+      if (tripCorridor(trip.source, trip.destination) !== filters.corridor) {
+        return false;
+      }
     }
 
     if (selected) {
@@ -162,7 +175,7 @@ export function filterTrips(
     if (filters.myTripsOnly && currentUserId) {
       const mine =
         trip.host.id === currentUserId ||
-        trip.guests.some((g) => g.id === currentUserId);
+        trip.riders.some((g) => g.id === currentUserId);
       if (!mine) return false;
     }
 
@@ -193,7 +206,9 @@ export function datesWithTrips(
   return keys;
 }
 
-export function groupTripsByDay(trips: Trip[]): { key: string; trips: Trip[] }[] {
+export function groupTripsByDay(
+  trips: Trip[],
+): { key: string; trips: Trip[] }[] {
   const map = new Map<string, Trip[]>();
   for (const trip of trips) {
     const key = toDateKey(new Date(trip.startsAt));

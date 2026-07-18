@@ -1,15 +1,29 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { LOCATIONS, MAX_PLAN_DAYS } from "@/lib/trips/constants";
+import {
+  CORRIDOR_PRESETS,
+  LOCATIONS,
+  MAX_PLAN_DAYS,
+  TIME_WINDOWS,
+} from "@/lib/trips/constants";
 import {
   addDays,
   endOfDay,
+  parseDateKey,
   parseDatetimeLocalValue,
   toDatetimeLocalValue,
+  toDateKey,
 } from "@/lib/trips/dates";
 import { isWithinPlanWindow } from "@/lib/trips/filter";
-import type { Trip, TripLocation, TripPerson } from "@/lib/trips/types";
+import type {
+  TimePrecision,
+  TimeWindow,
+  Trip,
+  TripIntent,
+  TripLocation,
+  TripPerson,
+} from "@/lib/trips/types";
 
 type CreateTripModalProps = {
   open: boolean;
@@ -18,7 +32,7 @@ type CreateTripModalProps = {
   host: TripPerson;
 };
 
-function defaultStartLocal(): string {
+function defaultExactLocal(): string {
   const d = new Date();
   d.setMinutes(d.getMinutes() + 60, 0, 0);
   return toDatetimeLocalValue(d);
@@ -35,68 +49,122 @@ export function CreateTripModal({
     return toDatetimeLocalValue(d);
   }, []);
   const minDate = useMemo(() => toDatetimeLocalValue(new Date()), []);
+  const maxDay = useMemo(() => toDateKey(addDays(new Date(), MAX_PLAN_DAYS)), []);
+  const minDay = useMemo(() => toDateKey(new Date()), []);
 
-  const [title, setTitle] = useState("");
+  const [intent, setIntent] = useState<TripIntent>("offer");
   const [source, setSource] = useState<TripLocation>("Network School");
   const [destination, setDestination] =
     useState<TripLocation>("Changi Airport");
-  const [startsAt, setStartsAt] = useState(defaultStartLocal);
-  const [endsAt, setEndsAt] = useState("");
-  const [meetingPoint, setMeetingPoint] = useState("NS Lobby");
+  const [precision, setPrecision] = useState<TimePrecision>("exact");
+  const [startsAt, setStartsAt] = useState(defaultExactLocal);
+  const [day, setDay] = useState(minDay);
+  const [windowId, setWindowId] = useState<TimeWindow>("evening");
   const [notes, setNotes] = useState("");
-  const [capacity, setCapacity] = useState(6);
+  const [meetingPoint, setMeetingPoint] = useState("");
+  const [capacity, setCapacity] = useState<string>("4");
   const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
+
+  function applyPreset(presetId: string) {
+    const preset = CORRIDOR_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    setSource(preset.source);
+    setDestination(preset.destination);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    const start = parseDatetimeLocalValue(startsAt);
-    if (Number.isNaN(start.getTime())) {
-      setError("Pick a valid start time.");
-      return;
-    }
-    if (!isWithinPlanWindow(start)) {
-      setError(
-        `Start time must be from now up to ${MAX_PLAN_DAYS} days ahead.`,
-      );
-      return;
-    }
     if (source === destination) {
       setError("Source and destination must be different.");
       return;
     }
 
-    const end = endsAt
-      ? parseDatetimeLocalValue(endsAt)
-      : new Date(start.getTime() + 90 * 60 * 1000);
-    if (Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) {
-      setError("End time must be after start time.");
+    let start: Date;
+    let end: Date;
+    let timeLabel = "";
+
+    if (precision === "exact") {
+      start = parseDatetimeLocalValue(startsAt);
+      if (Number.isNaN(start.getTime())) {
+        setError("Pick a valid start time.");
+        return;
+      }
+      if (!isWithinPlanWindow(start)) {
+        setError(
+          `Start time must be from now up to ${MAX_PLAN_DAYS} days ahead.`,
+        );
+        return;
+      }
+      end = new Date(start.getTime() + 90 * 60 * 1000);
+    } else {
+      const win = TIME_WINDOWS.find((w) => w.id === windowId)!;
+      const base = parseDateKey(day);
+      if (Number.isNaN(base.getTime())) {
+        setError("Pick a valid day.");
+        return;
+      }
+      start = new Date(base);
+      start.setHours(win.startHour, 0, 0, 0);
+      end = new Date(base);
+      if (win.endHour >= 24) {
+        end = addDays(base, 1);
+        end.setHours(0, 0, 0, 0);
+      } else {
+        end.setHours(win.endHour, 0, 0, 0);
+      }
+      if (!isWithinPlanWindow(start)) {
+        setError(
+          `Day must be from today up to ${MAX_PLAN_DAYS} days ahead.`,
+        );
+        return;
+      }
+      timeLabel = `${base.toLocaleDateString("en-US", {
+        weekday: "long",
+      })} ${win.label.toLowerCase()}`;
+    }
+
+    const seats =
+      intent === "offer" && capacity.trim() !== ""
+        ? Math.max(1, Number(capacity))
+        : null;
+    if (intent === "offer" && capacity.trim() !== "" && Number.isNaN(seats)) {
+      setError("Seats must be a number, or leave blank.");
       return;
     }
 
+    const title =
+      intent === "request"
+        ? `Looking: ${source} → ${destination}`
+        : `${source} → ${destination}`;
+
     const trip: Trip = {
       id: `t-${Date.now()}`,
-      title: title.trim() || `${source} → ${destination}`,
+      title,
+      intent,
+      status: "open",
       source,
       destination,
       startsAt: start.toISOString(),
       endsAt: end.toISOString(),
-      meetingPoint: meetingPoint.trim() || "TBD",
+      timePrecision: precision,
+      timeLabel,
+      meetingPoint: meetingPoint.trim(),
       notes: notes.trim(),
       host,
-      guests: [],
-      capacity,
+      riders: [],
+      capacity: seats,
+      notifyDiscord: true,
     };
 
     onCreate(trip);
     onClose();
-    setTitle("");
     setNotes("");
-    setStartsAt(defaultStartLocal());
-    setEndsAt("");
+    setMeetingPoint("");
+    setStartsAt(defaultExactLocal());
     setError(null);
   }
 
@@ -110,15 +178,15 @@ export function CreateTripModal({
       />
       <form
         onSubmit={handleSubmit}
-        className="relative z-10 w-full max-w-lg rounded-2xl border border-[var(--iron-200)] bg-white p-5 shadow-sm md:p-6"
+        className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--iron-200)] bg-white p-5 shadow-sm md:p-6"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="font-display text-2xl font-semibold text-[var(--ns-ink)]">
-              Create trip
+              Post a trip
             </h2>
             <p className="mt-1 text-sm text-[var(--iron-500)]">
-              Plan up to {MAX_PLAN_DAYS} days ahead.
+              A few fields — Discord notifies people who join.
             </p>
           </div>
           <button
@@ -131,18 +199,60 @@ export function CreateTripModal({
           </button>
         </div>
 
+        <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-[var(--iron-100)] p-1">
+          {(
+            [
+              ["offer", "Offering seats"],
+              ["request", "Looking for a ride"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setIntent(value)}
+              className={[
+                "rounded-full px-3 py-2 text-sm font-semibold transition",
+                intent === value
+                  ? "bg-white text-[var(--ns-ink)] shadow-sm"
+                  : "text-[var(--iron-500)]",
+              ].join(" ")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="space-y-3">
-          <Field label="Title">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Airport run → Changi"
-              className="field-input"
-            />
-          </Field>
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-[var(--ns-ink)]">
+              Quick route
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {CORRIDOR_PRESETS.map((preset) => {
+                const active =
+                  source === preset.source &&
+                  destination === preset.destination;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset.id)}
+                    className={[
+                      "rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                      active
+                        ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]"
+                        : "bg-[var(--iron-50)] text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-white",
+                    ].join(" ")}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Source">
+            <Field label="From">
               <select
                 value={source}
                 onChange={(e) => setSource(e.target.value as TripLocation)}
@@ -155,7 +265,7 @@ export function CreateTripModal({
                 ))}
               </select>
             </Field>
-            <Field label="Destination">
+            <Field label="To">
               <select
                 value={destination}
                 onChange={(e) => setDestination(e.target.value as TripLocation)}
@@ -170,8 +280,31 @@ export function CreateTripModal({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Starts">
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-[var(--iron-100)] p-1">
+            {(
+              [
+                ["exact", "Exact time"],
+                ["flexible", "Flexible window"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setPrecision(value)}
+                className={[
+                  "rounded-full px-3 py-2 text-sm font-semibold transition",
+                  precision === value
+                    ? "bg-white text-[var(--ns-ink)] shadow-sm"
+                    : "text-[var(--iron-500)]",
+                ].join(" ")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {precision === "exact" ? (
+            <Field label="Leaves">
               <input
                 type="datetime-local"
                 value={startsAt}
@@ -182,46 +315,74 @@ export function CreateTripModal({
                 className="field-input"
               />
             </Field>
-            <Field label="Ends">
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Day">
+                <input
+                  type="date"
+                  value={day}
+                  min={minDay}
+                  max={maxDay}
+                  onChange={(e) => setDay(e.target.value)}
+                  required
+                  className="field-input"
+                />
+              </Field>
+              <Field label="Window">
+                <select
+                  value={windowId}
+                  onChange={(e) => setWindowId(e.target.value as TimeWindow)}
+                  className="field-input"
+                >
+                  {TIME_WINDOWS.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          )}
+
+          {intent === "offer" ? (
+            <Field label="Seats (optional)">
               <input
-                type="datetime-local"
-                value={endsAt}
-                min={startsAt || minDate}
-                max={maxDate}
-                onChange={(e) => setEndsAt(e.target.value)}
+                type="number"
+                min={1}
+                max={20}
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                placeholder="Leave blank for no limit"
                 className="field-input"
               />
             </Field>
-          </div>
+          ) : null}
 
-          <Field label="Meeting point">
-            <input
-              value={meetingPoint}
-              onChange={(e) => setMeetingPoint(e.target.value)}
-              className="field-input"
-            />
-          </Field>
-
-          <Field label="Notes">
+          <Field label="Note (optional)">
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              rows={3}
+              rows={2}
+              placeholder="Bags ok · share Grab · landing 30th night…"
               className="field-input resize-none"
             />
           </Field>
 
-          <Field label="Capacity">
+          <Field label="Meeting point (optional)">
             <input
-              type="number"
-              min={2}
-              max={20}
-              value={capacity}
-              onChange={(e) => setCapacity(Number(e.target.value))}
+              value={meetingPoint}
+              onChange={(e) => setMeetingPoint(e.target.value)}
+              placeholder="NS Lobby, T3 Arrival…"
               className="field-input"
             />
           </Field>
         </div>
+
+        <p className="mt-3 text-xs text-[var(--iron-400)]">
+          Starts as <span className="font-semibold text-[var(--ns-ink)]">Open</span>
+          . Confirm the time later from the list when it’s locked in. Joins ping
+          Discord.
+        </p>
 
         {error ? (
           <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -241,7 +402,7 @@ export function CreateTripModal({
             type="submit"
             className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
           >
-            Create trip
+            Post trip
           </button>
         </div>
       </form>

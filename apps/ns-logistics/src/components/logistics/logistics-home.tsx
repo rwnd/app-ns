@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { CreateTripModal } from "@/components/logistics/create-trip-modal";
 import { TripCalendar } from "@/components/logistics/trip-calendar";
 import { TripCard } from "@/components/logistics/trip-card";
-import { LOCATIONS, PAST_VISIBLE_DAYS } from "@/lib/trips/constants";
+import { PAST_VISIBLE_DAYS } from "@/lib/trips/constants";
 import {
   formatDayLabel,
   parseDateKey,
@@ -15,14 +15,17 @@ import {
   datesWithTrips,
   filterTrips,
   groupTripsByDay,
+  isJoinable,
+  seatsLeft,
 } from "@/lib/trips/filter";
 import { createMockTrips } from "@/lib/trips/mock-data";
 import type {
   QuickRange,
   Trip,
+  TripCorridor,
   TripFilters,
-  TripLocation,
   TripPerson,
+  TripStatus,
 } from "@/lib/trips/types";
 
 type LogisticsHomeProps = {
@@ -36,8 +39,7 @@ type LogisticsHomeProps = {
 const defaultFilters: TripFilters = {
   query: "",
   quickRange: "all",
-  source: "all",
-  destination: "all",
+  corridor: "all",
   selectedDate: null,
   timeMode: "upcoming",
   myTripsOnly: false,
@@ -51,7 +53,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [createOpen, setCreateOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [flashByTrip, setFlashByTrip] = useState<Record<string, string>>({});
 
   const now = useMemo(() => new Date(), []);
   const stats = useMemo(() => computeStats(trips, now), [trips, now]);
@@ -79,20 +81,76 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     setFilters((prev) => ({ ...prev, ...patch }));
   }
 
+  function flash(tripId: string, message: string) {
+    setFlashByTrip((prev) => ({ ...prev, [tripId]: message }));
+    window.setTimeout(() => {
+      setFlashByTrip((prev) => {
+        const next = { ...prev };
+        delete next[tripId];
+        return next;
+      });
+    }, 3500);
+  }
+
   function toggleJoin(tripId: string) {
     setTrips((prev) =>
       prev.map((trip) => {
         if (trip.id !== tripId) return trip;
         if (trip.host.id === user.id) return trip;
-        const joined = trip.guests.some((g) => g.id === user.id);
+
+        const joined = trip.riders.some((g) => g.id === user.id);
         if (joined) {
+          flash(tripId, "Left the trip — Discord won’t be notified.");
           return {
             ...trip,
-            guests: trip.guests.filter((g) => g.id !== user.id),
+            riders: trip.riders.filter((g) => g.id !== user.id),
+            status: trip.status === "full" ? "open" : trip.status,
           };
         }
-        if (trip.guests.length >= trip.capacity) return trip;
-        return { ...trip, guests: [...trip.guests, host] };
+
+        if (!isJoinable(trip)) return trip;
+
+        const nextRiders = [...trip.riders, host];
+        const left =
+          trip.capacity === null
+            ? null
+            : Math.max(trip.capacity - nextRiders.length, 0);
+        const nextStatus =
+          left === 0 ? ("full" as const) : trip.status;
+
+        flash(
+          tripId,
+          trip.notifyDiscord
+            ? "You're in — Discord notify to the host (and riders) queued."
+            : "You're in.",
+        );
+
+        return {
+          ...trip,
+          riders: nextRiders,
+          status: nextStatus,
+        };
+      }),
+    );
+  }
+
+  function setStatus(tripId: string, status: TripStatus) {
+    setTrips((prev) =>
+      prev.map((trip) => {
+        if (trip.id !== tripId || trip.host.id !== user.id) return trip;
+        if (status === "full" && seatsLeft(trip) === null) {
+          // companion posts: "full" just closes joins
+          return { ...trip, status: "full" };
+        }
+        flash(
+          tripId,
+          status === "confirmed"
+            ? "Time confirmed — Discord can ping everyone on this trip."
+            : status === "cancelled"
+              ? "Trip cancelled."
+              : "Marked full.",
+        );
+        return { ...trip, status };
       }),
     );
   }
@@ -105,17 +163,18 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
             <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
               Logistics
             </h1>
-            <p className="max-w-md text-sm text-[var(--iron-500)] md:text-base">
-              Coordinate rides to and from Network School.
+            <p className="max-w-lg text-sm text-[var(--iron-500)] md:text-base">
+              Ride board for NS — post a trip or tap I&apos;m in. Coordination
+              stays on Discord.
             </p>
             <div className="mt-3 flex w-full max-w-lg items-center justify-between gap-4">
+              <Stat label="Open" value={stats.open} />
               <Stat label="Upcoming" value={stats.upcoming} />
               <Stat label="Next 24h" value={stats.inProgressNext24h} />
-              <Stat label="Expired" value={stats.expired} />
             </div>
             <p className="mt-2 text-xs text-[var(--iron-400)]">
-              Past list shows the last {PAST_VISIBLE_DAYS} days ·{" "}
-              {stats.plannedTotal} trips planned overall
+              Past list: last {PAST_VISIBLE_DAYS} days · No detail pages — join
+              from the list
             </p>
           </div>
         </section>
@@ -131,141 +190,79 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                   <input
                     value={filters.query}
                     onChange={(e) => updateFilters({ query: e.target.value })}
-                    placeholder="Search trips, places, dates..."
+                    placeholder="Search Changi, Singapore, Saturday…"
                     className="h-10 w-full rounded-full border-0 bg-white py-2.5 pl-10 pr-4 text-sm outline-none ring-1 ring-[var(--iron-200)] focus:ring-2 focus:ring-[var(--accent)]"
                   />
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => setFiltersOpen((v) => !v)}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--iron-200)] bg-white px-3 text-sm font-semibold text-[var(--ns-ink)] hover:bg-[var(--iron-50)] xl:px-4"
-                  aria-expanded={filtersOpen}
-                >
-                  <FilterIcon />
-                  <span className="hidden xl:inline">Filter</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => setCreateOpen(true)}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-3 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] xl:px-4"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-4 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
                 >
-                  <span className="xl:hidden">+</span>
-                  <span className="hidden xl:inline">+ Create Trip</span>
-                  <span className="xl:hidden">Create</span>
+                  + Post trip
                 </button>
               </div>
 
-              {filtersOpen ? (
-                <div className="mt-3 grid grid-cols-1 gap-3 rounded-2xl border border-[var(--iron-200)] bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-[var(--ns-ink)]">
-                      Source
-                    </span>
-                    <select
-                      value={filters.source}
-                      onChange={(e) =>
-                        updateFilters({
-                          source: e.target.value as TripLocation | "all",
-                        })
-                      }
-                      className="field-input"
-                    >
-                      <option value="all">All sources</option>
-                      {LOCATIONS.map((loc) => (
-                        <option key={loc} value={loc}>
-                          {loc}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium text-[var(--ns-ink)]">
-                      Destination
-                    </span>
-                    <select
-                      value={filters.destination}
-                      onChange={(e) =>
-                        updateFilters({
-                          destination: e.target.value as TripLocation | "all",
-                        })
-                      }
-                      className="field-input"
-                    >
-                      <option value="all">All destinations</option>
-                      {LOCATIONS.map((loc) => (
-                        <option key={loc} value={loc}>
-                          {loc}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="sm:col-span-2">
-                    <p className="mb-1 text-sm font-medium text-[var(--ns-ink)]">
-                      Quick range
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {(
-                        [
-                          ["all", "All"],
-                          ["today", "Today"],
-                          ["tomorrow", "Tomorrow"],
-                        ] as const
-                      ).map(([value, label]) => (
-                        <Chip
-                          key={value}
-                          active={filters.quickRange === value}
-                          onClick={() =>
-                            updateFilters({ quickRange: value as QuickRange })
-                          }
-                        >
-                          {label}
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {(
-                    [
-                      ["all", "All"],
-                      ["today", "Today"],
-                      ["tomorrow", "Tomorrow"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <Chip
-                      key={value}
-                      active={filters.quickRange === value}
-                      onClick={() =>
-                        updateFilters({ quickRange: value as QuickRange })
-                      }
-                    >
-                      {label}
-                    </Chip>
-                  ))}
-                  <button
-                    type="button"
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {(
+                  [
+                    ["all", "All"],
+                    ["airport", "Airport"],
+                    ["singapore", "Singapore"],
+                    ["local", "Local"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Chip
+                    key={value}
+                    active={filters.corridor === value}
                     onClick={() =>
-                      updateFilters({ myTripsOnly: !filters.myTripsOnly })
+                      updateFilters({
+                        corridor: value as TripCorridor | "all",
+                      })
                     }
-                    className={[
-                      "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
-                      filters.myTripsOnly
-                        ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]"
-                        : "bg-white text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-[var(--iron-50)]",
-                    ].join(" ")}
                   >
-                    My trips
-                  </button>
-                </div>
-              )}
+                    {label}
+                  </Chip>
+                ))}
+                <span className="mx-1 hidden h-4 w-px bg-[var(--iron-200)] sm:block" />
+                {(
+                  [
+                    ["all", "Any day"],
+                    ["today", "Today"],
+                    ["tomorrow", "Tomorrow"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Chip
+                    key={value}
+                    active={filters.quickRange === value}
+                    onClick={() =>
+                      updateFilters({ quickRange: value as QuickRange })
+                    }
+                  >
+                    {label}
+                  </Chip>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateFilters({ myTripsOnly: !filters.myTripsOnly })
+                  }
+                  className={[
+                    "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
+                    filters.myTripsOnly
+                      ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]"
+                      : "bg-white text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-[var(--iron-50)]",
+                  ].join(" ")}
+                >
+                  Mine
+                </button>
+              </div>
             </div>
 
             <div className="pb-4 pt-3 md:rounded-2xl md:border md:border-[var(--iron-200)] md:bg-white md:px-8 md:shadow-sm">
               <p className="mb-3 text-sm font-medium text-[var(--iron-500)]">
-                {visibleTrips.length} trip
+                {visibleTrips.length} post
                 {visibleTrips.length === 1 ? "" : "s"}
                 {filters.timeMode === "past" ? " · past" : " · upcoming"}
               </p>
@@ -273,11 +270,18 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
               {grouped.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[var(--iron-300)] bg-[var(--iron-50)] px-6 py-16 text-center md:bg-transparent">
                   <p className="text-lg font-semibold text-[var(--ns-ink)]">
-                    No trips found
+                    No trips yet
                   </p>
                   <p className="mt-1 text-sm text-[var(--iron-500)]">
-                    Try clearing filters or create a new trip.
+                    Post one in a few clicks — airport, Singapore, or local.
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => setCreateOpen(true)}
+                    className="mt-4 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    + Post trip
+                  </button>
                 </div>
               ) : (
                 <div className="flex flex-col">
@@ -302,7 +306,9 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                             trip={trip}
                             currentUserId={user.id}
                             onToggleJoin={toggleJoin}
+                            onSetStatus={setStatus}
                             isPast={filters.timeMode === "past"}
+                            flash={flashByTrip[trip.id] ?? null}
                           />
                         ))}
                       </div>
@@ -404,21 +410,6 @@ function SearchIcon() {
     >
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" />
-    </svg>
-  );
-}
-
-function FilterIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M4 5h16l-6 8v5l-4 2v-7L4 5z" />
     </svg>
   );
 }
