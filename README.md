@@ -8,7 +8,7 @@ Monorepo for Network School apps.
 
 Ride board for shared trips to/from Network School (airport, Singapore, JB, Eco Botanica).
 
-**Product:** plain ride list (from → to · when · how). **I'm in** / **Going. Cancel.** Optional details accordion. No titles, no hero stats, no thumbnails. Discord is **opt-in**: host confirms **Share to Discord** → one short-lived `#logistics` thread; riders confirm before a thread mention.
+**Product:** a ride **board** — from → to, when, how. **I'm in** / **Going. Cancel.** Optional details. No calendar, no hero, no thumbnails. **Trips** + light **Activity** (counts / place volume). Discord is **opt-in** (short-lived `#logistics` threads).
 
 **Stack:** Next.js (App Router) · React · TypeScript · Tailwind · Auth.js (Discord)
 

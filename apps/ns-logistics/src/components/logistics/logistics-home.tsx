@@ -1,21 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ActivityPanel } from "@/components/logistics/activity-panel";
 import { CreateTripModal } from "@/components/logistics/create-trip-modal";
 import { DiscordConfirm } from "@/components/logistics/discord-confirm";
-import { TripCalendar } from "@/components/logistics/trip-calendar";
 import { TripCard } from "@/components/logistics/trip-card";
 import {
   discordThreadTitle,
   stubDiscordThreadUrl,
 } from "@/lib/trips/discord";
+import { formatDayLabel, parseDateKey } from "@/lib/trips/dates";
 import {
-  formatDayLabel,
-  parseDateKey,
-  toDateKey,
-} from "@/lib/trips/dates";
-import {
-  datesWithTrips,
   filterTrips,
   groupTripsByDay,
   isJoinable,
@@ -52,13 +47,12 @@ type DiscordPrompt =
   | { kind: "mention"; tripId: string }
   | null;
 
+type MainTab = "trips" | "activity";
+
 export function LogisticsHome({ user }: LogisticsHomeProps) {
   const [trips, setTrips] = useState<Trip[]>(() => createMockTrips());
   const [filters, setFilters] = useState<TripFilters>(defaultFilters);
-  const [month, setMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
+  const [tab, setTab] = useState<MainTab>("trips");
   const [createOpen, setCreateOpen] = useState(false);
   const [flashByTrip, setFlashByTrip] = useState<Record<string, string>>({});
   const [discordPrompt, setDiscordPrompt] = useState<DiscordPrompt>(null);
@@ -69,14 +63,6 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     [trips, filters, user.id, now],
   );
   const grouped = useMemo(() => groupTripsByDay(visibleTrips), [visibleTrips]);
-  const calendarDates = useMemo(
-    () => datesWithTrips(trips, filters.timeMode, now),
-    [trips, filters.timeMode, now],
-  );
-  const eventsTodayCount = useMemo(() => {
-    const key = toDateKey(now);
-    return trips.filter((t) => toDateKey(new Date(t.startsAt)) === key).length;
-  }, [trips, now]);
 
   const host: TripPerson = {
     id: user.id,
@@ -85,7 +71,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
   };
 
   const promptTrip = discordPrompt
-    ? trips.find((t) => t.id === discordPrompt.tripId) ?? null
+    ? (trips.find((t) => t.id === discordPrompt.tripId) ?? null)
     : null;
 
   function updateFilters(patch: Partial<TripFilters>) {
@@ -126,11 +112,10 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
             ? null
             : Math.max(trip.capacity - nextRiders.length, 0);
 
-        // App-only join — Discord mention is a separate confirmed action
         if (trip.discordThreadUrl) {
           flash(
             tripId,
-            "You're going. Tap “Mention me” if you want a Discord ping in the thread.",
+            "You're going. Tap “Mention me” if you want a Discord ping.",
           );
         }
 
@@ -171,180 +156,194 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
           const url = stubDiscordThreadUrl(trip);
           flash(
             tripId,
-            `Thread ready in #logistics: “${discordThreadTitle(trip)}” (short-lived).`,
+            `Thread ready: “${discordThreadTitle(trip)}” (short-lived).`,
           );
           return { ...trip, discordThreadUrl: url };
         }),
       );
     } else {
-      flash(
-        tripId,
-        "Mention queued in the trip thread — channel stays quiet.",
-      );
+      flash(tripId, "Mention queued in the trip thread.");
     }
     setDiscordPrompt(null);
   }
 
   return (
     <div className="min-h-screen bg-[var(--iron-100)] text-[var(--ns-ink)]">
-      <div className="mx-auto w-full max-w-screen-xl px-3 pb-20 pt-4 sm:px-6 md:pb-8 lg:px-12 lg:py-5">
-        <div className="flex items-start gap-6">
-          <div className="min-w-0 flex-1">
-            <div className="sticky top-[56px] z-40 bg-[var(--iron-100)]/95 pb-2 pt-2 backdrop-blur sm:pb-3 sm:pt-3">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--iron-400)]">
-                    <SearchIcon />
-                  </span>
-                  <input
-                    value={filters.query}
-                    onChange={(e) => updateFilters({ query: e.target.value })}
-                    placeholder="Search Changi, Singapore, Saturday…"
-                    className="h-10 w-full rounded-full border-0 bg-white py-2.5 pl-10 pr-4 text-sm outline-none ring-1 ring-[var(--iron-200)] focus:ring-2 focus:ring-[var(--accent)]"
-                  />
-                </div>
+      <div className="mx-auto w-full max-w-3xl px-3 pb-20 pt-4 sm:px-6 md:pb-10 md:pt-6">
+        <div className="sticky top-[56px] z-40 -mx-3 space-y-3 bg-[var(--iron-100)]/95 px-3 py-2 backdrop-blur sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--iron-400)]">
+                <SearchIcon />
+              </span>
+              <input
+                value={filters.query}
+                onChange={(e) => updateFilters({ query: e.target.value })}
+                placeholder="Search Changi, Singapore, Saturday…"
+                className="h-10 w-full rounded-full border-0 bg-white py-2.5 pl-10 pr-4 text-sm outline-none ring-1 ring-[var(--iron-200)] focus:ring-2 focus:ring-[var(--ns-ink)]"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex h-10 items-center justify-center rounded-full bg-[var(--ns-ink)] px-4 text-sm font-semibold text-white hover:bg-[#1f2937]"
+            >
+              + Post
+            </button>
+          </div>
 
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-[var(--iron-200)]">
+              {(
+                [
+                  ["trips", "Trips"],
+                  ["activity", "Activity"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setTab(value)}
+                  className={[
+                    "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
+                    tab === value
+                      ? "bg-[var(--ns-ink)] text-white"
+                      : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
+                  ].join(" ")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {tab === "trips" ? (
+              <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-[var(--iron-200)]">
+                {(
+                  [
+                    ["upcoming", "Upcoming"],
+                    ["past", "Past"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => updateFilters({ timeMode: value })}
+                    className={[
+                      "rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                      filters.timeMode === value
+                        ? "bg-[var(--iron-100)] text-[var(--ns-ink)]"
+                        : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
+                    ].join(" ")}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          {tab === "trips" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {(
+                [
+                  ["all", "All"],
+                  ["airport", "Airport"],
+                  ["singapore", "Singapore"],
+                  ["local", "Local"],
+                ] as const
+              ).map(([value, label]) => (
+                <Chip
+                  key={value}
+                  active={filters.corridor === value}
+                  onClick={() =>
+                    updateFilters({
+                      corridor: value as TripCorridor | "all",
+                    })
+                  }
+                >
+                  {label}
+                </Chip>
+              ))}
+              <span className="mx-0.5 hidden h-4 w-px bg-[var(--iron-200)] sm:block" />
+              {(
+                [
+                  ["all", "Any day"],
+                  ["today", "Today"],
+                  ["tomorrow", "Tomorrow"],
+                ] as const
+              ).map(([value, label]) => (
+                <Chip
+                  key={value}
+                  active={filters.quickRange === value}
+                  onClick={() =>
+                    updateFilters({ quickRange: value as QuickRange })
+                  }
+                >
+                  {label}
+                </Chip>
+              ))}
+              <Chip
+                active={filters.myTripsOnly}
+                onClick={() =>
+                  updateFilters({ myTripsOnly: !filters.myTripsOnly })
+                }
+              >
+                Mine
+              </Chip>
+            </div>
+          ) : null}
+        </div>
+
+        {tab === "trips" ? (
+          <div className="trip-board mt-3">
+            {grouped.length === 0 ? (
+              <div className="px-6 py-16 text-center">
+                <p className="text-base font-semibold text-[var(--ns-ink)]">
+                  No trips
+                </p>
+                <p className="mt-1 text-sm text-[var(--iron-500)]">
+                  Post from → to and when. Share to Discord only if you want.
+                </p>
                 <button
                   type="button"
                   onClick={() => setCreateOpen(true)}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-4 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
+                  className="mt-4 rounded-full bg-[var(--ns-ink)] px-4 py-2 text-sm font-semibold text-white"
                 >
-                  + Post trip
+                  + Post
                 </button>
               </div>
-
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {(
-                  [
-                    ["all", "All"],
-                    ["airport", "Airport"],
-                    ["singapore", "Singapore"],
-                    ["local", "Local"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <Chip
-                    key={value}
-                    active={filters.corridor === value}
-                    onClick={() =>
-                      updateFilters({
-                        corridor: value as TripCorridor | "all",
-                      })
-                    }
-                  >
-                    {label}
-                  </Chip>
-                ))}
-                <span className="mx-1 hidden h-4 w-px bg-[var(--iron-200)] sm:block" />
-                {(
-                  [
-                    ["all", "Any day"],
-                    ["today", "Today"],
-                    ["tomorrow", "Tomorrow"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <Chip
-                    key={value}
-                    active={filters.quickRange === value}
-                    onClick={() =>
-                      updateFilters({ quickRange: value as QuickRange })
-                    }
-                  >
-                    {label}
-                  </Chip>
-                ))}
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateFilters({ myTripsOnly: !filters.myTripsOnly })
-                  }
-                  className={[
-                    "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
-                    filters.myTripsOnly
-                      ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]"
-                      : "bg-white text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-[var(--iron-50)]",
-                  ].join(" ")}
-                >
-                  Mine
-                </button>
-              </div>
-            </div>
-
-            <div className="pb-4 pt-2 md:rounded-2xl md:border md:border-[var(--iron-200)] md:bg-white md:px-6 md:shadow-sm">
-              {grouped.length === 0 ? (
-                <div className="px-2 py-16 text-center">
-                  <p className="text-lg font-semibold text-[var(--ns-ink)]">
-                    No trips yet
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--iron-500)]">
-                    Post from → to and when. Share to Discord only if you want.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setCreateOpen(true)}
-                    className="mt-4 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    + Post trip
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col">
-                  {grouped.map((group) => (
-                    <div key={group.key}>
-                      <h2 className="sticky top-[148px] z-30 -mx-1 bg-[var(--iron-100)]/95 px-1 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--iron-400)] backdrop-blur md:static md:bg-transparent md:px-0 md:pt-4 md:normal-case md:tracking-normal md:text-sm md:text-[var(--iron-500)]">
-                        {formatDayLabel(parseDateKey(group.key), now)}
-                      </h2>
-                      <div className="divide-y divide-[var(--iron-200)] md:divide-y-0">
-                        {group.trips.map((trip) => (
-                          <TripCard
-                            key={trip.id}
-                            trip={trip}
-                            currentUserId={user.id}
-                            onToggleJoin={toggleJoin}
-                            onSetStatus={setStatus}
-                            onShareDiscord={(id) =>
-                              setDiscordPrompt({ kind: "share", tripId: id })
-                            }
-                            onMentionDiscord={(id) =>
-                              setDiscordPrompt({ kind: "mention", tripId: id })
-                            }
-                            isPast={filters.timeMode === "past"}
-                            flash={flashByTrip[trip.id] ?? null}
-                          />
-                        ))}
-                      </div>
-                    </div>
+            ) : (
+              grouped.map((group) => (
+                <div key={group.key}>
+                  <h2 className="trip-day">
+                    {formatDayLabel(parseDateKey(group.key), now)}
+                  </h2>
+                  {group.trips.map((trip) => (
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      currentUserId={user.id}
+                      onToggleJoin={toggleJoin}
+                      onSetStatus={setStatus}
+                      onShareDiscord={(id) =>
+                        setDiscordPrompt({ kind: "share", tripId: id })
+                      }
+                      onMentionDiscord={(id) =>
+                        setDiscordPrompt({ kind: "mention", tripId: id })
+                      }
+                      isPast={filters.timeMode === "past"}
+                      flash={flashByTrip[trip.id] ?? null}
+                    />
                   ))}
                 </div>
-              )}
-            </div>
+              ))
+            )}
           </div>
-
-          <div className="sticky top-[72px] hidden shrink-0 self-start pt-3 xl:block">
-            <TripCalendar
-              month={month}
-              onMonthChange={setMonth}
-              selectedDate={filters.selectedDate}
-              onSelectDate={(selectedDate) => updateFilters({ selectedDate })}
-              datesWithTrips={calendarDates}
-              timeMode={filters.timeMode}
-              onTimeModeChange={(timeMode) => updateFilters({ timeMode })}
-              eventsTodayCount={eventsTodayCount}
-            />
+        ) : (
+          <div className="mt-3 rounded-2xl border border-[var(--iron-200)] bg-white px-5 py-6 sm:px-6">
+            <ActivityPanel trips={trips} now={now} />
           </div>
-        </div>
-
-        <div className="mt-4 xl:hidden">
-          <TripCalendar
-            month={month}
-            onMonthChange={setMonth}
-            selectedDate={filters.selectedDate}
-            onSelectDate={(selectedDate) => updateFilters({ selectedDate })}
-            datesWithTrips={calendarDates}
-            timeMode={filters.timeMode}
-            onTimeModeChange={(timeMode) => updateFilters({ timeMode })}
-            eventsTodayCount={eventsTodayCount}
-          />
-        </div>
+        )}
       </div>
 
       <CreateTripModal
@@ -352,6 +351,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
         onClose={() => setCreateOpen(false)}
         onCreate={(trip) => {
           setTrips((prev) => [trip, ...prev]);
+          setTab("trips");
           updateFilters({ timeMode: "upcoming", quickRange: "all" });
         }}
         host={host}
@@ -362,7 +362,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
         title="Create a #logistics thread?"
         body={
           promptTrip
-            ? `This opens one short-lived thread named “${discordThreadTitle(promptTrip)}”. Joins stay in the thread — the channel itself won’t flood. Auto-archive after the trip.`
+            ? `Opens one short-lived thread: “${discordThreadTitle(promptTrip)}”. Joins stay in the thread — the channel won’t flood.`
             : "Create a short-lived thread for this trip."
         }
         confirmLabel="Create thread"
@@ -373,7 +373,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
       <DiscordConfirm
         open={discordPrompt?.kind === "mention"}
         title="Mention you in the thread?"
-        body="Posts a single line in the trip’s Discord thread (not the main #logistics channel). Skip if you’d rather DM."
+        body="Posts a single line in the trip thread — not the main channel."
         confirmLabel="Mention me"
         onConfirm={confirmDiscord}
         onCancel={() => setDiscordPrompt(null)}
@@ -396,7 +396,7 @@ function Chip({
       type="button"
       onClick={onClick}
       className={[
-        "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
+        "rounded-full px-3 py-1.5 text-sm font-semibold transition",
         active
           ? "bg-[var(--ns-ink)] text-white"
           : "bg-white text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-[var(--iron-50)]",

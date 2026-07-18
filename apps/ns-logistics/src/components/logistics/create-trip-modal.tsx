@@ -408,7 +408,7 @@ export function CreateTripModal({
           </button>
           <button
             type="submit"
-            className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
+            className="rounded-full bg-[var(--ns-ink)] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1f2937]"
           >
             Post trip
           </button>
