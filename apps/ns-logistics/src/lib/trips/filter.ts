@@ -35,8 +35,15 @@ export function isWithinPastUiWindow(trip: Trip, now = new Date()): boolean {
 }
 
 export function isWithinPlanWindow(startsAt: Date, now = new Date()): boolean {
+  if (Number.isNaN(startsAt.getTime())) return false;
+  // Floor "now" to the minute so datetime-local values (second-less) aren't rejected
+  const nowFloor = new Date(now);
+  nowFloor.setSeconds(0, 0);
   const max = endOfDay(addDays(now, MAX_PLAN_DAYS));
-  return startsAt.getTime() >= now.getTime() && startsAt.getTime() <= max.getTime();
+  return (
+    startsAt.getTime() >= nowFloor.getTime() &&
+    startsAt.getTime() <= max.getTime()
+  );
 }
 
 export function computeStats(trips: Trip[], now = new Date()): TripStats {

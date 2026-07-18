@@ -40,124 +40,128 @@ export function TripCalendar({
   }
 
   return (
-    <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            Logistics: {monthLabel(month)}
-          </h2>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-600">
-            <span aria-hidden="true">🎉</span>
-            {eventsTodayCount} trip{eventsTodayCount === 1 ? "" : "s"} today
+    <aside className="relative w-full overflow-hidden rounded-2xl border border-[var(--iron-200)] bg-white p-5 shadow-sm xl:w-[420px] xl:p-6">
+      <div className="absolute right-5 top-0 h-12 w-9 rounded-b-2xl bg-[var(--iron-100)]" />
+
+      <div className="flex flex-col items-start gap-4">
+        <div className="rounded-full border border-[var(--iron-200)] bg-[var(--iron-50)] px-4 py-2 text-sm font-semibold text-[var(--ns-ink)]">
+          {monthLabel(month)}
+        </div>
+
+        <div className="flex items-end gap-2">
+          <p className="text-3xl font-semibold tracking-tight text-[var(--ns-ink)]">
+            {eventsTodayCount}
+          </p>
+          <p className="mb-1 text-sm text-[var(--iron-500)]">
+            trip{eventsTodayCount === 1 ? "" : "s"} today
           </p>
         </div>
-      </div>
 
-      <div className="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500">
-        {WEEKDAYS.map((d, i) => (
-          <div key={`${d}-${i}`} className="py-1">
-            {d}
+        <div className="w-full">
+          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-medium text-[var(--iron-500)]">
+            {WEEKDAYS.map((d, i) => (
+              <div key={`${d}-${i}`} className="py-1">
+                {d}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="mt-1 grid grid-cols-7 gap-1">
-        {cells.map((date, idx) => {
-          if (!date) {
-            return <div key={`empty-${idx}`} className="h-9" />;
-          }
-          const key = toDateKey(date);
-          const hasTrips = datesWithTrips.has(key);
-          const isSelected = selectedDate === key;
-          const isToday = key === todayKey;
+          <div className="grid grid-cols-7 gap-1">
+            {cells.map((date, idx) => {
+              if (!date) {
+                return <div key={`empty-${idx}`} className="aspect-square p-1" />;
+              }
+              const key = toDateKey(date);
+              const hasTrips = datesWithTrips.has(key);
+              const isSelected = selectedDate === key;
+              const isToday = key === todayKey;
 
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onSelectDate(isSelected ? null : key)}
-              className={[
-                "relative flex h-9 items-center justify-center rounded-full text-sm transition",
-                isSelected
-                  ? "bg-[#7C3AED] font-semibold text-white"
-                  : hasTrips
-                    ? "bg-[#EDE9FE] font-semibold text-[#5B21B6] hover:bg-[#DDD6FE]"
-                    : isToday
-                      ? "ring-2 ring-[#7C3AED] ring-inset text-gray-900"
-                      : "text-gray-700 hover:bg-gray-100",
-              ].join(" ")}
-              aria-pressed={isSelected}
-              aria-label={`Filter by ${key}`}
-            >
-              {date.getDate()}
-              {hasTrips && !isSelected ? (
-                <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-[#7C3AED]" />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => onSelectDate(isSelected ? null : key)}
+                  className={[
+                    "aspect-square w-full rounded-full text-sm transition",
+                    isSelected
+                      ? "bg-[var(--accent)] font-semibold text-white"
+                      : hasTrips
+                        ? "bg-[var(--accent-soft)] font-semibold text-[var(--accent-hover)] hover:bg-[var(--accent-soft-border)]"
+                        : isToday
+                          ? "ring-2 ring-[var(--accent)] ring-inset text-[var(--ns-ink)]"
+                          : "text-[var(--ns-ink)] hover:bg-[var(--iron-100)]",
+                  ].join(" ")}
+                  aria-pressed={isSelected}
+                  aria-label={`Filter by ${key}`}
+                >
+                  {date.getDate()}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50"
-          onClick={() => onMonthChange(new Date(year, monthIndex - 1, 1))}
-          aria-label="Previous month"
-        >
-          ‹
-        </button>
-
-        <div className="flex flex-1 items-center rounded-full bg-gray-100 p-1">
+        <div className="mt-auto flex w-full items-center gap-3">
           <button
             type="button"
-            onClick={() => onTimeModeChange("upcoming")}
-            className={[
-              "flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition",
-              timeMode === "upcoming"
-                ? "bg-gray-900 text-white"
-                : "text-gray-600 hover:text-gray-900",
-            ].join(" ")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--iron-200)] text-[var(--ns-ink)] hover:bg-[var(--iron-50)]"
+            onClick={() => onMonthChange(new Date(year, monthIndex - 1, 1))}
+            aria-label="Previous month"
           >
-            Upcoming
+            ‹
           </button>
+
+          <div className="flex flex-1 overflow-hidden rounded-full border border-[var(--iron-200)] bg-[var(--iron-100)] p-1">
+            <button
+              type="button"
+              onClick={() => onTimeModeChange("upcoming")}
+              className={[
+                "flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                timeMode === "upcoming"
+                  ? "bg-white text-[var(--ns-ink)] shadow-sm"
+                  : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
+              ].join(" ")}
+            >
+              Upcoming
+            </button>
+            <button
+              type="button"
+              onClick={() => onTimeModeChange("past")}
+              className={[
+                "flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                timeMode === "past"
+                  ? "bg-white text-[var(--ns-ink)] shadow-sm"
+                  : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
+              ].join(" ")}
+            >
+              Past
+            </button>
+          </div>
+
           <button
             type="button"
-            onClick={() => onTimeModeChange("past")}
-            className={[
-              "flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition",
-              timeMode === "past"
-                ? "bg-gray-900 text-white"
-                : "text-gray-600 hover:text-gray-900",
-            ].join(" ")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--iron-200)] text-[var(--ns-ink)] hover:bg-[var(--iron-50)]"
+            onClick={() => onMonthChange(new Date(year, monthIndex + 1, 1))}
+            aria-label="Next month"
           >
-            Past
+            ›
           </button>
         </div>
 
-        <button
-          type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50"
-          onClick={() => onMonthChange(new Date(year, monthIndex + 1, 1))}
-          aria-label="Next month"
-        >
-          ›
-        </button>
+        {selectedDate ? (
+          <button
+            type="button"
+            onClick={() => onSelectDate(null)}
+            className="w-full text-center text-xs font-medium text-[var(--accent)] hover:underline"
+          >
+            Clear date filter ({selectedDate})
+          </button>
+        ) : (
+          <p className="w-full text-center text-xs text-[var(--iron-400)]">
+            Click a date to filter the list
+          </p>
+        )}
       </div>
-
-      {selectedDate ? (
-        <button
-          type="button"
-          onClick={() => onSelectDate(null)}
-          className="mt-3 w-full text-center text-xs font-medium text-[#7C3AED] hover:underline"
-        >
-          Clear date filter ({selectedDate})
-        </button>
-      ) : (
-        <p className="mt-3 text-center text-xs text-gray-400">
-          Click a date to filter the list
-        </p>
-      )}
     </aside>
   );
 }

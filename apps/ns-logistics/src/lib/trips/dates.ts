@@ -1,3 +1,30 @@
+/** Format a Date for `<input type="datetime-local">` in local time. */
+export function toDatetimeLocalValue(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const h = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+/** Parse a datetime-local string as local time (not UTC). */
+export function parseDatetimeLocalValue(value: string): Date {
+  // `YYYY-MM-DDTHH:mm` — construct locally so timezone skew doesn't reject valid picks
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim());
+  if (!match) return new Date(Number.NaN);
+  const [, ys, ms, ds, hs, mins] = match;
+  return new Date(
+    Number(ys),
+    Number(ms) - 1,
+    Number(ds),
+    Number(hs),
+    Number(mins),
+    0,
+    0,
+  );
+}
+
 export function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);

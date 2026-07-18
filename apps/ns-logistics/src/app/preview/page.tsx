@@ -14,7 +14,8 @@ export default function PreviewPage() {
       <AppTopbar
         user={{
           name: "Aravind Ranganathan",
-          image: "https://api.dicebear.com/9.x/thumbs/svg?seed=Aravind&backgroundColor=7c3aed",
+          image:
+            "https://api.dicebear.com/9.x/thumbs/svg?seed=Aravind&backgroundColor=2970ff",
         }}
       />
       <LogisticsHome
@@ -22,7 +23,7 @@ export default function PreviewPage() {
           id: "preview-user",
           name: "Aravind Ranganathan",
           image:
-            "https://api.dicebear.com/9.x/thumbs/svg?seed=Aravind&backgroundColor=7c3aed",
+            "https://api.dicebear.com/9.x/thumbs/svg?seed=Aravind&backgroundColor=2970ff",
         }}
       />
     </>

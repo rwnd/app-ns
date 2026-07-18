@@ -1,11 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #f4f4f5;
   --foreground: #111827;
   --ns-ink: #111827;
-  --ns-muted: #1f2937;
+  --ns-muted: #70707b;
   --ns-footer: #131316;
+  --iron-25: #fcfbfc;
+  --iron-50: #fafafa;
+  --iron-100: #f4f4f5;
+  --iron-200: #e4e4e7;
+  --iron-300: #d1d1d6;
+  --iron-400: #a0a0ab;
+  --iron-500: #70707b;
+  --accent: #2970ff;
+  --accent-hover: #155eef;
+  --accent-soft: #eff4ff;
+  --accent-soft-border: #d1e0ff;
 }
 
 @theme inline {
@@ -77,14 +88,19 @@ body {
 .field-input {
   width: 100%;
   border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--iron-200);
   background: #fff;
   padding: 0.625rem 0.75rem;
   font-size: 0.875rem;
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .field-input:focus {
-  border-color: #c4b5fd;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(41, 112, 255, 0.12);
+}
+
+.trip-enter {
+  animation: fade-in 0.35s ease both;
 }

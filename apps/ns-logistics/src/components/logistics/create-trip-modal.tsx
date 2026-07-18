@@ -2,7 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { LOCATIONS, MAX_PLAN_DAYS } from "@/lib/trips/constants";
-import { addDays, endOfDay } from "@/lib/trips/dates";
+import {
+  addDays,
+  endOfDay,
+  parseDatetimeLocalValue,
+  toDatetimeLocalValue,
+} from "@/lib/trips/dates";
 import { isWithinPlanWindow } from "@/lib/trips/filter";
 import type { Trip, TripLocation, TripPerson } from "@/lib/trips/types";
 
@@ -13,6 +18,12 @@ type CreateTripModalProps = {
   host: TripPerson;
 };
 
+function defaultStartLocal(): string {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() + 60, 0, 0);
+  return toDatetimeLocalValue(d);
+}
+
 export function CreateTripModal({
   open,
   onClose,
@@ -21,15 +32,15 @@ export function CreateTripModal({
 }: CreateTripModalProps) {
   const maxDate = useMemo(() => {
     const d = endOfDay(addDays(new Date(), MAX_PLAN_DAYS));
-    return d.toISOString().slice(0, 16);
+    return toDatetimeLocalValue(d);
   }, []);
-  const minDate = useMemo(() => new Date().toISOString().slice(0, 16), []);
+  const minDate = useMemo(() => toDatetimeLocalValue(new Date()), []);
 
   const [title, setTitle] = useState("");
   const [source, setSource] = useState<TripLocation>("Network School");
   const [destination, setDestination] =
     useState<TripLocation>("Changi Airport");
-  const [startsAt, setStartsAt] = useState(minDate);
+  const [startsAt, setStartsAt] = useState(defaultStartLocal);
   const [endsAt, setEndsAt] = useState("");
   const [meetingPoint, setMeetingPoint] = useState("NS Lobby");
   const [notes, setNotes] = useState("");
@@ -42,9 +53,15 @@ export function CreateTripModal({
     e.preventDefault();
     setError(null);
 
-    const start = new Date(startsAt);
+    const start = parseDatetimeLocalValue(startsAt);
+    if (Number.isNaN(start.getTime())) {
+      setError("Pick a valid start time.");
+      return;
+    }
     if (!isWithinPlanWindow(start)) {
-      setError(`Trips can only be planned up to ${MAX_PLAN_DAYS} days in advance.`);
+      setError(
+        `Start time must be from now up to ${MAX_PLAN_DAYS} days ahead.`,
+      );
       return;
     }
     if (source === destination) {
@@ -53,9 +70,9 @@ export function CreateTripModal({
     }
 
     const end = endsAt
-      ? new Date(endsAt)
+      ? parseDatetimeLocalValue(endsAt)
       : new Date(start.getTime() + 90 * 60 * 1000);
-    if (end.getTime() <= start.getTime()) {
+    if (Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) {
       setError("End time must be after start time.");
       return;
     }
@@ -78,10 +95,13 @@ export function CreateTripModal({
     onClose();
     setTitle("");
     setNotes("");
+    setStartsAt(defaultStartLocal());
+    setEndsAt("");
+    setError(null);
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-4 sm:items-center">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 p-4 sm:items-center">
       <button
         type="button"
         className="absolute inset-0 cursor-default"
@@ -90,21 +110,21 @@ export function CreateTripModal({
       />
       <form
         onSubmit={handleSubmit}
-        className="relative z-10 w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl md:p-6"
+        className="relative z-10 w-full max-w-lg rounded-2xl border border-[var(--iron-200)] bg-white p-5 shadow-sm md:p-6"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-display text-2xl font-bold text-gray-900">
+            <h2 className="font-display text-2xl font-semibold text-[var(--ns-ink)]">
               Create trip
             </h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-[var(--iron-500)]">
               Plan up to {MAX_PLAN_DAYS} days ahead.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-gray-500 hover:bg-gray-100"
+            className="rounded-full p-2 text-[var(--iron-500)] hover:bg-[var(--iron-100)]"
             aria-label="Close"
           >
             ✕
@@ -204,7 +224,7 @@ export function CreateTripModal({
         </div>
 
         {error ? (
-          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </p>
         ) : null}
@@ -213,13 +233,13 @@ export function CreateTripModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+            className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--ns-ink)] hover:bg-[var(--iron-100)]"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="rounded-full bg-gray-900 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-700"
+            className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
           >
             Create trip
           </button>
@@ -238,7 +258,7 @@ function Field({
 }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1 block font-medium text-gray-700">{label}</span>
+      <span className="mb-1 block font-medium text-[var(--ns-ink)]">{label}</span>
       {children}
     </label>
   );

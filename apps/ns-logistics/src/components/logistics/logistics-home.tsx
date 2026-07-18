@@ -98,110 +98,136 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F4F5] text-gray-900">
-      <div className="mx-auto w-full max-w-[1440px] px-3 pb-16 pt-4 md:px-6 md:pt-6">
-        {/* Summary — scrolls away */}
-        <section className="mb-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
-                Logistics
-              </h1>
-              <p className="mt-1 text-sm text-gray-600 md:text-base">
-                Coordinate rides to and from Network School.
-              </p>
+    <div className="min-h-screen bg-[var(--iron-100)] text-[var(--ns-ink)]">
+      <div className="mx-auto w-full max-w-screen-xl px-3 pb-20 pt-4 sm:px-6 md:pb-8 lg:px-12 lg:py-5">
+        <section className="mb-4 rounded-2xl border border-[var(--iron-200)] bg-[var(--iron-50)] px-6 pb-6 pt-10 md:pt-8">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+              Logistics
+            </h1>
+            <p className="max-w-md text-sm text-[var(--iron-500)] md:text-base">
+              Coordinate rides to and from Network School.
+            </p>
+            <div className="mt-3 flex w-full max-w-lg items-center justify-between gap-4">
+              <Stat label="Upcoming" value={stats.upcoming} />
+              <Stat label="Next 24h" value={stats.inProgressNext24h} />
+              <Stat label="Expired" value={stats.expired} />
             </div>
+            <p className="mt-2 text-xs text-[var(--iron-400)]">
+              Past list shows the last {PAST_VISIBLE_DAYS} days ·{" "}
+              {stats.plannedTotal} trips planned overall
+            </p>
           </div>
-
-          <div className="mt-5 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 md:max-w-xl">
-            <Stat label="Upcoming" value={stats.upcoming} />
-            <Stat label="Next 24h" value={stats.inProgressNext24h} />
-            <Stat label="Expired" value={stats.expired} hint="all-time" />
-          </div>
-          <p className="mt-3 text-xs text-gray-400">
-            Past list shows the last {PAST_VISIBLE_DAYS} days · {stats.plannedTotal}{" "}
-            trips planned overall
-          </p>
         </section>
 
-        {/* Filters stick under the top bar after summary scrolls away */}
-        <div className="sticky top-[56px] z-40 -mx-3 mb-3 space-y-3 bg-[#F4F4F5]/95 px-3 py-2 backdrop-blur md:-mx-0 md:px-0">
-          <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:p-4">
-            <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <SearchIcon />
-              </span>
-              <input
-                value={filters.query}
-                onChange={(e) => updateFilters({ query: e.target.value })}
-                placeholder="Search trips, places, dates..."
-                className="w-full rounded-full border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm outline-none ring-[#7C3AED]/30 focus:bg-white focus:ring-2"
-              />
-            </div>
+        <div className="flex items-start gap-6">
+          <div className="min-w-0 flex-1">
+            <div className="sticky top-[56px] z-40 bg-[var(--iron-100)]/95 pb-2 pt-2 backdrop-blur sm:pb-3 sm:pt-3">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--iron-400)]">
+                    <SearchIcon />
+                  </span>
+                  <input
+                    value={filters.query}
+                    onChange={(e) => updateFilters({ query: e.target.value })}
+                    placeholder="Search trips, places, dates..."
+                    className="h-10 w-full rounded-full border-0 bg-white py-2.5 pl-10 pr-4 text-sm outline-none ring-1 ring-[var(--iron-200)] focus:ring-2 focus:ring-[var(--accent)]"
+                  />
+                </div>
 
-            <button
-              type="button"
-              onClick={() => setFiltersOpen((v) => !v)}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50"
-            >
-              <FilterIcon />
-              Filter
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700"
-            >
-              + Create Trip
-            </button>
-          </div>
-
-          {filtersOpen ? (
-            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-gray-700">Source</span>
-                <select
-                  value={filters.source}
-                  onChange={(e) =>
-                    updateFilters({
-                      source: e.target.value as TripLocation | "all",
-                    })
-                  }
-                  className="field-input"
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen((v) => !v)}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--iron-200)] bg-white px-3 text-sm font-semibold text-[var(--ns-ink)] hover:bg-[var(--iron-50)] xl:px-4"
+                  aria-expanded={filtersOpen}
                 >
-                  <option value="all">All sources</option>
-                  {LOCATIONS.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-gray-700">
-                  Destination
-                </span>
-                <select
-                  value={filters.destination}
-                  onChange={(e) =>
-                    updateFilters({
-                      destination: e.target.value as TripLocation | "all",
-                    })
-                  }
-                  className="field-input"
+                  <FilterIcon />
+                  <span className="hidden xl:inline">Filter</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCreateOpen(true)}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-3 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] xl:px-4"
                 >
-                  <option value="all">All destinations</option>
-                  {LOCATIONS.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="sm:col-span-2">
-                <p className="mb-1 text-sm font-medium text-gray-700">Quick range</p>
-                <div className="flex flex-wrap gap-2">
+                  <span className="xl:hidden">+</span>
+                  <span className="hidden xl:inline">+ Create Trip</span>
+                  <span className="xl:hidden">Create</span>
+                </button>
+              </div>
+
+              {filtersOpen ? (
+                <div className="mt-3 grid grid-cols-1 gap-3 rounded-2xl border border-[var(--iron-200)] bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <label className="text-sm">
+                    <span className="mb-1 block font-medium text-[var(--ns-ink)]">
+                      Source
+                    </span>
+                    <select
+                      value={filters.source}
+                      onChange={(e) =>
+                        updateFilters({
+                          source: e.target.value as TripLocation | "all",
+                        })
+                      }
+                      className="field-input"
+                    >
+                      <option value="all">All sources</option>
+                      {LOCATIONS.map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm">
+                    <span className="mb-1 block font-medium text-[var(--ns-ink)]">
+                      Destination
+                    </span>
+                    <select
+                      value={filters.destination}
+                      onChange={(e) =>
+                        updateFilters({
+                          destination: e.target.value as TripLocation | "all",
+                        })
+                      }
+                      className="field-input"
+                    >
+                      <option value="all">All destinations</option>
+                      {LOCATIONS.map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="sm:col-span-2">
+                    <p className="mb-1 text-sm font-medium text-[var(--ns-ink)]">
+                      Quick range
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(
+                        [
+                          ["all", "All"],
+                          ["today", "Today"],
+                          ["tomorrow", "Tomorrow"],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <Chip
+                          key={value}
+                          active={filters.quickRange === value}
+                          onClick={() =>
+                            updateFilters({ quickRange: value as QuickRange })
+                          }
+                        >
+                          {label}
+                        </Chip>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   {(
                     [
                       ["all", "All"],
@@ -219,91 +245,75 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                       {label}
                     </Chip>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateFilters({ myTripsOnly: !filters.myTripsOnly })
+                    }
+                    className={[
+                      "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
+                      filters.myTripsOnly
+                        ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]"
+                        : "bg-white text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-[var(--iron-50)]",
+                    ].join(" ")}
+                  >
+                    My trips
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ["all", "All"],
-                  ["today", "Today"],
-                  ["tomorrow", "Tomorrow"],
-                ] as const
-              ).map(([value, label]) => (
-                <Chip
-                  key={value}
-                  active={filters.quickRange === value}
-                  onClick={() =>
-                    updateFilters({ quickRange: value as QuickRange })
-                  }
-                >
-                  {label}
-                </Chip>
-              ))}
-            </div>
-          )}
-        </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <section className="min-w-0">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-600">
+            <div className="pb-4 pt-3 md:rounded-2xl md:border md:border-[var(--iron-200)] md:bg-white md:px-8 md:shadow-sm">
+              <p className="mb-3 text-sm font-medium text-[var(--iron-500)]">
                 {visibleTrips.length} trip
                 {visibleTrips.length === 1 ? "" : "s"}
                 {filters.timeMode === "past" ? " · past" : " · upcoming"}
               </p>
-              <button
-                type="button"
-                onClick={() =>
-                  updateFilters({ myTripsOnly: !filters.myTripsOnly })
-                }
-                className={[
-                  "rounded-full px-3 py-1.5 text-sm font-semibold transition",
-                  filters.myTripsOnly
-                    ? "bg-[#EDE9FE] text-[#5B21B6]"
-                    : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50",
-                ].join(" ")}
-              >
-                My trips
-              </button>
+
+              {grouped.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[var(--iron-300)] bg-[var(--iron-50)] px-6 py-16 text-center md:bg-transparent">
+                  <p className="text-lg font-semibold text-[var(--ns-ink)]">
+                    No trips found
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--iron-500)]">
+                    Try clearing filters or create a new trip.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  {grouped.map((group) => (
+                    <div key={group.key} className="relative md:ml-[11px]">
+                      <div
+                        aria-hidden="true"
+                        className="absolute bottom-0 left-0 top-6 hidden border-l border-dashed border-[var(--iron-300)] md:block"
+                      />
+                      <div className="flex items-center justify-between pb-2 pt-1 md:-ml-[21px]">
+                        <div className="flex items-center gap-2 rounded-full border border-[var(--iron-300)] bg-white/70 px-3 py-1.5 shadow-sm">
+                          <span className="hidden h-2 w-2 rounded-full bg-[var(--accent)] sm:block" />
+                          <h2 className="text-sm font-semibold text-[var(--ns-ink)]">
+                            {formatDayLabel(parseDateKey(group.key), now)}
+                          </h2>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-3 pb-5 md:pl-5">
+                        {group.trips.map((trip) => (
+                          <TripCard
+                            key={trip.id}
+                            trip={trip}
+                            currentUserId={user.id}
+                            onToggleJoin={toggleJoin}
+                            isPast={filters.timeMode === "past"}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+          </div>
 
-            {grouped.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-                <p className="text-lg font-semibold text-gray-800">No trips found</p>
-                <p className="mt-1 text-sm text-gray-500">
-                  Try clearing filters or create a new trip.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {grouped.map((group) => (
-                  <div key={group.key}>
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-[#7C3AED]" />
-                      <h2 className="text-sm font-semibold text-gray-800">
-                        {formatDayLabel(parseDateKey(group.key), now)}
-                      </h2>
-                    </div>
-                    <div className="space-y-3">
-                      {group.trips.map((trip) => (
-                        <TripCard
-                          key={trip.id}
-                          trip={trip}
-                          currentUserId={user.id}
-                          onToggleJoin={toggleJoin}
-                          isPast={filters.timeMode === "past"}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <div className="lg:sticky lg:top-[180px] lg:self-start">
+          <div className="sticky top-[72px] hidden shrink-0 self-start pt-3 xl:block">
             <TripCalendar
               month={month}
               onMonthChange={setMonth}
@@ -315,6 +325,19 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
               eventsTodayCount={eventsTodayCount}
             />
           </div>
+        </div>
+
+        <div className="mt-4 xl:hidden">
+          <TripCalendar
+            month={month}
+            onMonthChange={setMonth}
+            selectedDate={filters.selectedDate}
+            onSelectDate={(selectedDate) => updateFilters({ selectedDate })}
+            datesWithTrips={calendarDates}
+            timeMode={filters.timeMode}
+            onTimeModeChange={(timeMode) => updateFilters({ timeMode })}
+            eventsTodayCount={eventsTodayCount}
+          />
         </div>
       </div>
 
@@ -331,23 +354,14 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
   );
 }
 
-function Stat({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: number;
-  hint?: string;
-}) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="text-center md:text-left">
-      <p className="text-2xl font-bold text-gray-900 md:text-3xl">{value}</p>
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-500 md:text-sm md:normal-case md:tracking-normal">
+    <div className="flex flex-1 flex-col items-center gap-0.5 px-2">
+      <p className="text-xs font-medium uppercase tracking-wide text-[var(--iron-500)]">
         {label}
-        {hint ? (
-          <span className="ml-1 text-[10px] uppercase text-gray-400">({hint})</span>
-        ) : null}
+      </p>
+      <p className="text-2xl font-semibold text-[var(--ns-ink)] md:text-3xl">
+        {value}
       </p>
     </div>
   );
@@ -369,8 +383,8 @@ function Chip({
       className={[
         "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
         active
-          ? "bg-gray-900 text-white"
-          : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50",
+          ? "bg-[var(--ns-ink)] text-white"
+          : "bg-white text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-[var(--iron-50)]",
       ].join(" ")}
     >
       {children}
@@ -380,7 +394,14 @@ function Chip({
 
 function SearchIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" />
     </svg>
@@ -389,7 +410,14 @@ function SearchIcon() {
 
 function FilterIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M4 5h16l-6 8v5l-4 2v-7L4 5z" />
     </svg>
   );
