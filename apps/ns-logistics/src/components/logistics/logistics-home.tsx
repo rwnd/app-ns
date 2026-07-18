@@ -2,21 +2,23 @@
 
 import { useMemo, useState } from "react";
 import { CreateTripModal } from "@/components/logistics/create-trip-modal";
+import { DiscordConfirm } from "@/components/logistics/discord-confirm";
 import { TripCalendar } from "@/components/logistics/trip-calendar";
 import { TripCard } from "@/components/logistics/trip-card";
-import { PAST_VISIBLE_DAYS } from "@/lib/trips/constants";
+import {
+  discordThreadTitle,
+  stubDiscordThreadUrl,
+} from "@/lib/trips/discord";
 import {
   formatDayLabel,
   parseDateKey,
   toDateKey,
 } from "@/lib/trips/dates";
 import {
-  computeStats,
   datesWithTrips,
   filterTrips,
   groupTripsByDay,
   isJoinable,
-  seatsLeft,
 } from "@/lib/trips/filter";
 import { createMockTrips } from "@/lib/trips/mock-data";
 import type {
@@ -45,6 +47,11 @@ const defaultFilters: TripFilters = {
   myTripsOnly: false,
 };
 
+type DiscordPrompt =
+  | { kind: "share"; tripId: string }
+  | { kind: "mention"; tripId: string }
+  | null;
+
 export function LogisticsHome({ user }: LogisticsHomeProps) {
   const [trips, setTrips] = useState<Trip[]>(() => createMockTrips());
   const [filters, setFilters] = useState<TripFilters>(defaultFilters);
@@ -54,9 +61,9 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
   });
   const [createOpen, setCreateOpen] = useState(false);
   const [flashByTrip, setFlashByTrip] = useState<Record<string, string>>({});
+  const [discordPrompt, setDiscordPrompt] = useState<DiscordPrompt>(null);
 
   const now = useMemo(() => new Date(), []);
-  const stats = useMemo(() => computeStats(trips, now), [trips, now]);
   const visibleTrips = useMemo(
     () => filterTrips(trips, filters, user.id, now),
     [trips, filters, user.id, now],
@@ -76,6 +83,10 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     name: user.name ?? "You",
     image: user.image,
   };
+
+  const promptTrip = discordPrompt
+    ? trips.find((t) => t.id === discordPrompt.tripId) ?? null
+    : null;
 
   function updateFilters(patch: Partial<TripFilters>) {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -100,7 +111,6 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
 
         const joined = trip.riders.some((g) => g.id === user.id);
         if (joined) {
-          flash(tripId, "Left the trip — Discord won’t be notified.");
           return {
             ...trip,
             riders: trip.riders.filter((g) => g.id !== user.id),
@@ -115,20 +125,19 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
           trip.capacity === null
             ? null
             : Math.max(trip.capacity - nextRiders.length, 0);
-        const nextStatus =
-          left === 0 ? ("full" as const) : trip.status;
 
-        flash(
-          tripId,
-          trip.notifyDiscord
-            ? "You're in — Discord notify to the host (and riders) queued."
-            : "You're in.",
-        );
+        // App-only join — Discord mention is a separate confirmed action
+        if (trip.discordThreadUrl) {
+          flash(
+            tripId,
+            "You're going. Tap “Mention me” if you want a Discord ping in the thread.",
+          );
+        }
 
         return {
           ...trip,
           riders: nextRiders,
-          status: nextStatus,
+          status: left === 0 ? "full" : trip.status,
         };
       }),
     );
@@ -138,47 +147,47 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     setTrips((prev) =>
       prev.map((trip) => {
         if (trip.id !== tripId || trip.host.id !== user.id) return trip;
-        if (status === "full" && seatsLeft(trip) === null) {
-          // companion posts: "full" just closes joins
-          return { ...trip, status: "full" };
-        }
         flash(
           tripId,
           status === "confirmed"
-            ? "Time confirmed — Discord can ping everyone on this trip."
+            ? "Time confirmed."
             : status === "cancelled"
               ? "Trip cancelled."
-              : "Marked full.",
+              : "Updated.",
         );
         return { ...trip, status };
       }),
     );
   }
 
+  function confirmDiscord() {
+    if (!discordPrompt) return;
+    const { kind, tripId } = discordPrompt;
+
+    if (kind === "share") {
+      setTrips((prev) =>
+        prev.map((trip) => {
+          if (trip.id !== tripId) return trip;
+          const url = stubDiscordThreadUrl(trip);
+          flash(
+            tripId,
+            `Thread ready in #logistics: “${discordThreadTitle(trip)}” (short-lived).`,
+          );
+          return { ...trip, discordThreadUrl: url };
+        }),
+      );
+    } else {
+      flash(
+        tripId,
+        "Mention queued in the trip thread — channel stays quiet.",
+      );
+    }
+    setDiscordPrompt(null);
+  }
+
   return (
     <div className="min-h-screen bg-[var(--iron-100)] text-[var(--ns-ink)]">
       <div className="mx-auto w-full max-w-screen-xl px-3 pb-20 pt-4 sm:px-6 md:pb-8 lg:px-12 lg:py-5">
-        <section className="mb-4 rounded-2xl border border-[var(--iron-200)] bg-[var(--iron-50)] px-6 pb-6 pt-10 md:pt-8">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-              Logistics
-            </h1>
-            <p className="max-w-lg text-sm text-[var(--iron-500)] md:text-base">
-              Ride board for NS — post a trip or tap I&apos;m in. Coordination
-              stays on Discord.
-            </p>
-            <div className="mt-3 flex w-full max-w-lg items-center justify-between gap-4">
-              <Stat label="Open" value={stats.open} />
-              <Stat label="Upcoming" value={stats.upcoming} />
-              <Stat label="Next 24h" value={stats.inProgressNext24h} />
-            </div>
-            <p className="mt-2 text-xs text-[var(--iron-400)]">
-              Past list: last {PAST_VISIBLE_DAYS} days · No detail pages — join
-              from the list
-            </p>
-          </div>
-        </section>
-
         <div className="flex items-start gap-6">
           <div className="min-w-0 flex-1">
             <div className="sticky top-[56px] z-40 bg-[var(--iron-100)]/95 pb-2 pt-2 backdrop-blur sm:pb-3 sm:pt-3">
@@ -260,20 +269,14 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
               </div>
             </div>
 
-            <div className="pb-4 pt-3 md:rounded-2xl md:border md:border-[var(--iron-200)] md:bg-white md:px-8 md:shadow-sm">
-              <p className="mb-3 text-sm font-medium text-[var(--iron-500)]">
-                {visibleTrips.length} post
-                {visibleTrips.length === 1 ? "" : "s"}
-                {filters.timeMode === "past" ? " · past" : " · upcoming"}
-              </p>
-
+            <div className="pb-4 pt-2 md:rounded-2xl md:border md:border-[var(--iron-200)] md:bg-white md:px-6 md:shadow-sm">
               {grouped.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[var(--iron-300)] bg-[var(--iron-50)] px-6 py-16 text-center md:bg-transparent">
+                <div className="px-2 py-16 text-center">
                   <p className="text-lg font-semibold text-[var(--ns-ink)]">
                     No trips yet
                   </p>
                   <p className="mt-1 text-sm text-[var(--iron-500)]">
-                    Post one in a few clicks — airport, Singapore, or local.
+                    Post from → to and when. Share to Discord only if you want.
                   </p>
                   <button
                     type="button"
@@ -286,20 +289,11 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
               ) : (
                 <div className="flex flex-col">
                   {grouped.map((group) => (
-                    <div key={group.key} className="relative md:ml-[11px]">
-                      <div
-                        aria-hidden="true"
-                        className="absolute bottom-0 left-0 top-6 hidden border-l border-dashed border-[var(--iron-300)] md:block"
-                      />
-                      <div className="flex items-center justify-between pb-2 pt-1 md:-ml-[21px]">
-                        <div className="flex items-center gap-2 rounded-full border border-[var(--iron-300)] bg-white/70 px-3 py-1.5 shadow-sm">
-                          <span className="hidden h-2 w-2 rounded-full bg-[var(--accent)] sm:block" />
-                          <h2 className="text-sm font-semibold text-[var(--ns-ink)]">
-                            {formatDayLabel(parseDateKey(group.key), now)}
-                          </h2>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-3 pb-5 md:pl-5">
+                    <div key={group.key}>
+                      <h2 className="sticky top-[148px] z-30 -mx-1 bg-[var(--iron-100)]/95 px-1 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--iron-400)] backdrop-blur md:static md:bg-transparent md:px-0 md:pt-4 md:normal-case md:tracking-normal md:text-sm md:text-[var(--iron-500)]">
+                        {formatDayLabel(parseDateKey(group.key), now)}
+                      </h2>
+                      <div className="divide-y divide-[var(--iron-200)] md:divide-y-0">
                         {group.trips.map((trip) => (
                           <TripCard
                             key={trip.id}
@@ -307,6 +301,12 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                             currentUserId={user.id}
                             onToggleJoin={toggleJoin}
                             onSetStatus={setStatus}
+                            onShareDiscord={(id) =>
+                              setDiscordPrompt({ kind: "share", tripId: id })
+                            }
+                            onMentionDiscord={(id) =>
+                              setDiscordPrompt({ kind: "mention", tripId: id })
+                            }
                             isPast={filters.timeMode === "past"}
                             flash={flashByTrip[trip.id] ?? null}
                           />
@@ -356,19 +356,28 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
         }}
         host={host}
       />
-    </div>
-  );
-}
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex flex-1 flex-col items-center gap-0.5 px-2">
-      <p className="text-xs font-medium uppercase tracking-wide text-[var(--iron-500)]">
-        {label}
-      </p>
-      <p className="text-2xl font-semibold text-[var(--ns-ink)] md:text-3xl">
-        {value}
-      </p>
+      <DiscordConfirm
+        open={discordPrompt?.kind === "share"}
+        title="Create a #logistics thread?"
+        body={
+          promptTrip
+            ? `This opens one short-lived thread named “${discordThreadTitle(promptTrip)}”. Joins stay in the thread — the channel itself won’t flood. Auto-archive after the trip.`
+            : "Create a short-lived thread for this trip."
+        }
+        confirmLabel="Create thread"
+        onConfirm={confirmDiscord}
+        onCancel={() => setDiscordPrompt(null)}
+      />
+
+      <DiscordConfirm
+        open={discordPrompt?.kind === "mention"}
+        title="Mention you in the thread?"
+        body="Posts a single line in the trip’s Discord thread (not the main #logistics channel). Skip if you’d rather DM."
+        confirmLabel="Mention me"
+        onConfirm={confirmDiscord}
+        onCancel={() => setDiscordPrompt(null)}
+      />
     </div>
   );
 }

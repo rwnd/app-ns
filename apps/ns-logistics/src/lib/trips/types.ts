@@ -15,7 +15,7 @@ export type TripLocation =
 export type TripIntent = "offer" | "request";
 
 /**
- * open — posted; time may still be fuzzy (Discord-style “Sat evening?”)
+ * open — posted; time may still be fuzzy
  * confirmed — host locked departure
  * full — no more riders
  * cancelled — called off
@@ -30,31 +30,30 @@ export type TimeWindow = "morning" | "afternoon" | "evening" | "night";
 export type TripCorridor = "airport" | "singapore" | "local";
 
 /**
- * A trip is a lightweight ride post — not an event with a details page.
- * Join/create stay on the list; Discord carries notifications.
+ * Lightweight ride post. Route + when + how are primary;
+ * notes/meeting/seats live in an accordion. Discord is opt-in.
  */
 export type Trip = {
   id: string;
-  title: string;
   intent: TripIntent;
   status: TripStatus;
   source: TripLocation;
   destination: TripLocation;
-  /** Departure (exact) or start of flexible window. */
   startsAt: string;
-  /** Estimated arrival / end of flexible window. */
   endsAt: string;
   timePrecision: TimePrecision;
-  /** Optional human label, e.g. "Saturday evening or Sunday night". */
   timeLabel: string;
   meetingPoint: string;
   notes: string;
   host: TripPerson;
   riders: TripPerson[];
-  /** null = no seat limit (companions / looking together). */
+  /** null = no seat limit. */
   capacity: number | null;
-  /** When someone joins, notify host (and later the rider group) on Discord. */
-  notifyDiscord: boolean;
+  /**
+   * Short-lived Discord thread in #logistics, created only after host confirms.
+   * Pattern: `{From}→{To} · {when} · {host}`
+   */
+  discordThreadUrl: string | null;
 };
 
 export type QuickRange = "all" | "today" | "tomorrow";

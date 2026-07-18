@@ -46,7 +46,6 @@ export function createMockTrips(now = new Date()): Trip[] {
   const trips: Trip[] = [
     {
       id: "t-today-airport",
-      title: "Airport run → Changi",
       intent: "offer",
       status: "confirmed",
       source: "Network School",
@@ -56,15 +55,15 @@ export function createMockTrips(now = new Date()): Trip[] {
       timePrecision: "exact",
       timeLabel: "",
       meetingPoint: "NS Lobby",
-      notes: "Van — 2 large bags ok. Discord ping when you join.",
+      notes: "Van — 2 large bags ok.",
       host: people.artem,
       riders: [people.maya, people.leo, people.sofia],
       capacity: 8,
-      notifyDiscord: true,
+      discordThreadUrl:
+        "https://discord.com/channels/stub/logistics/thread-t-today-airport",
     },
     {
       id: "t-sg-return-flex",
-      title: "Back from Singapore",
       intent: "request",
       status: "open",
       source: "Singapore",
@@ -74,16 +73,14 @@ export function createMockTrips(now = new Date()): Trip[] {
       timePrecision: "flexible",
       timeLabel: "Saturday evening or Sunday night",
       meetingPoint: "",
-      notes:
-        "Anyone traveling back from Singapore this weekend? Happy to share Grab / bus.",
+      notes: "Happy to share Grab / bus.",
       host: people.dan,
       riders: [],
       capacity: null,
-      notifyDiscord: true,
+      discordThreadUrl: null,
     },
     {
       id: "t-tomorrow-sg",
-      title: "Singapore day trip",
       intent: "offer",
       status: "confirmed",
       source: "Network School",
@@ -97,11 +94,11 @@ export function createMockTrips(now = new Date()): Trip[] {
       host: people.maya,
       riders: [people.artem, people.leo, people.priya],
       capacity: 6,
-      notifyDiscord: true,
+      discordThreadUrl:
+        "https://discord.com/channels/stub/logistics/thread-t-tomorrow-sg",
     },
     {
       id: "t-tomorrow-return",
-      title: "Changi arrival → NS",
       intent: "offer",
       status: "open",
       source: "Changi Airport",
@@ -115,11 +112,10 @@ export function createMockTrips(now = new Date()): Trip[] {
       host: people.leo,
       riders: [people.owen],
       capacity: 4,
-      notifyDiscord: true,
+      discordThreadUrl: null,
     },
     {
       id: "t-cohort-arrival",
-      title: "Looking for July arrival companions",
       intent: "request",
       status: "open",
       source: "Changi Airport",
@@ -129,16 +125,14 @@ export function createMockTrips(now = new Date()): Trip[] {
       timePrecision: "flexible",
       timeLabel: "Evening — landing window flexible",
       meetingPoint: "",
-      notes:
-        "Heading straight to Forest City after landing. DM-style: join and I’ll coordinate on Discord.",
+      notes: "Heading straight to Forest City after landing.",
       host: people.hari,
       riders: [people.jade],
       capacity: null,
-      notifyDiscord: true,
+      discordThreadUrl: null,
     },
     {
       id: "t-in-two-jb",
-      title: "JB Sentral grocery haul",
       intent: "offer",
       status: "open",
       source: "Network School",
@@ -152,11 +146,10 @@ export function createMockTrips(now = new Date()): Trip[] {
       host: people.priya,
       riders: [people.jade],
       capacity: 5,
-      notifyDiscord: true,
+      discordThreadUrl: null,
     },
     {
       id: "t-today-eco",
-      title: "Evening walk to Eco Botanica",
       intent: "offer",
       status: "open",
       source: "Network School",
@@ -170,11 +163,10 @@ export function createMockTrips(now = new Date()): Trip[] {
       host: people.sofia,
       riders: [people.jade, people.owen],
       capacity: 12,
-      notifyDiscord: true,
+      discordThreadUrl: null,
     },
     {
       id: "t-yesterday-eco",
-      title: "Sunset at Eco Botanica",
       intent: "offer",
       status: "confirmed",
       source: "Network School",
@@ -188,11 +180,10 @@ export function createMockTrips(now = new Date()): Trip[] {
       host: people.jade,
       riders: [people.leo, people.artem, people.priya],
       capacity: 10,
-      notifyDiscord: true,
+      discordThreadUrl: null,
     },
     {
       id: "t-three-ago-airport",
-      title: "Arrival pickup",
       intent: "offer",
       status: "confirmed",
       source: "Changi Airport",
@@ -206,11 +197,10 @@ export function createMockTrips(now = new Date()): Trip[] {
       host: people.artem,
       riders: [people.sofia, people.nate],
       capacity: 4,
-      notifyDiscord: true,
+      discordThreadUrl: null,
     },
     {
       id: "t-ten-ago-sg",
-      title: "Old Singapore loop",
       intent: "offer",
       status: "confirmed",
       source: "Network School",
@@ -220,11 +210,11 @@ export function createMockTrips(now = new Date()): Trip[] {
       timePrecision: "exact",
       timeLabel: "",
       meetingPoint: "NS Lobby",
-      notes: "Outside 7-day UI window — stats only.",
+      notes: "Outside 7-day UI window.",
       host: people.maya,
       riders: [people.owen, people.jade],
       capacity: 6,
-      notifyDiscord: true,
+      discordThreadUrl: null,
     },
   ];
 
@@ -232,7 +222,6 @@ export function createMockTrips(now = new Date()): Trip[] {
   const soonEnd = new Date(soon.getTime() + 75 * 60 * 1000);
   trips.push({
     id: "t-soon-shuttle",
-    title: "Rolling shuttle to JB Sentral",
     intent: "offer",
     status: "confirmed",
     source: "Network School",
@@ -246,7 +235,7 @@ export function createMockTrips(now = new Date()): Trip[] {
     host: people.nate,
     riders: [people.maya],
     capacity: 5,
-    notifyDiscord: true,
+    discordThreadUrl: null,
   });
 
   return trips;

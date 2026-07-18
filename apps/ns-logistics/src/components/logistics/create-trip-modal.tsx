@@ -62,7 +62,8 @@ export function CreateTripModal({
   const [windowId, setWindowId] = useState<TimeWindow>("evening");
   const [notes, setNotes] = useState("");
   const [meetingPoint, setMeetingPoint] = useState("");
-  const [capacity, setCapacity] = useState<string>("4");
+  const [capacity, setCapacity] = useState<string>("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
@@ -117,9 +118,7 @@ export function CreateTripModal({
         end.setHours(win.endHour, 0, 0, 0);
       }
       if (!isWithinPlanWindow(start)) {
-        setError(
-          `Day must be from today up to ${MAX_PLAN_DAYS} days ahead.`,
-        );
+        setError(`Day must be from today up to ${MAX_PLAN_DAYS} days ahead.`);
         return;
       }
       timeLabel = `${base.toLocaleDateString("en-US", {
@@ -136,14 +135,8 @@ export function CreateTripModal({
       return;
     }
 
-    const title =
-      intent === "request"
-        ? `Looking: ${source} → ${destination}`
-        : `${source} → ${destination}`;
-
     const trip: Trip = {
       id: `t-${Date.now()}`,
-      title,
       intent,
       status: "open",
       source,
@@ -157,13 +150,15 @@ export function CreateTripModal({
       host,
       riders: [],
       capacity: seats,
-      notifyDiscord: true,
+      discordThreadUrl: null,
     };
 
     onCreate(trip);
     onClose();
     setNotes("");
     setMeetingPoint("");
+    setCapacity("");
+    setDetailsOpen(false);
     setStartsAt(defaultExactLocal());
     setError(null);
   }
@@ -186,7 +181,7 @@ export function CreateTripModal({
               Post a trip
             </h2>
             <p className="mt-1 text-sm text-[var(--iron-500)]">
-              A few fields — Discord notifies people who join.
+              From → to, when, how. Discord share is optional later.
             </p>
           </div>
           <button
@@ -225,7 +220,7 @@ export function CreateTripModal({
         <div className="space-y-3">
           <div>
             <p className="mb-1.5 text-sm font-medium text-[var(--ns-ink)]">
-              Quick route
+              Route
             </p>
             <div className="flex flex-wrap gap-1.5">
               {CORRIDOR_PRESETS.map((preset) => {
@@ -304,7 +299,7 @@ export function CreateTripModal({
           </div>
 
           {precision === "exact" ? (
-            <Field label="Leaves">
+            <Field label="When">
               <input
                 type="datetime-local"
                 value={startsAt}
@@ -344,44 +339,57 @@ export function CreateTripModal({
             </div>
           )}
 
-          {intent === "offer" ? (
-            <Field label="Seats (optional)">
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={capacity}
-                onChange={(e) => setCapacity(e.target.value)}
-                placeholder="Leave blank for no limit"
-                className="field-input"
-              />
-            </Field>
+          <button
+            type="button"
+            onClick={() => setDetailsOpen((v) => !v)}
+            className="text-sm font-semibold text-[var(--iron-500)] hover:text-[var(--ns-ink)]"
+            aria-expanded={detailsOpen}
+          >
+            {detailsOpen ? "Hide optional details" : "+ Optional details"}
+          </button>
+
+          {detailsOpen ? (
+            <div className="space-y-3 rounded-xl bg-[var(--iron-50)] p-3">
+              {intent === "offer" ? (
+                <Field label="Seats">
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={capacity}
+                    onChange={(e) => setCapacity(e.target.value)}
+                    placeholder="Blank = no limit"
+                    className="field-input"
+                  />
+                </Field>
+              ) : null}
+              <Field label="Notes">
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Bags ok · share Grab · landing 30th night…"
+                  className="field-input resize-none"
+                />
+              </Field>
+              <Field label="Meeting point">
+                <input
+                  value={meetingPoint}
+                  onChange={(e) => setMeetingPoint(e.target.value)}
+                  placeholder="NS Lobby, T3 Arrival…"
+                  className="field-input"
+                />
+              </Field>
+            </div>
           ) : null}
-
-          <Field label="Note (optional)">
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              placeholder="Bags ok · share Grab · landing 30th night…"
-              className="field-input resize-none"
-            />
-          </Field>
-
-          <Field label="Meeting point (optional)">
-            <input
-              value={meetingPoint}
-              onChange={(e) => setMeetingPoint(e.target.value)}
-              placeholder="NS Lobby, T3 Arrival…"
-              className="field-input"
-            />
-          </Field>
         </div>
 
         <p className="mt-3 text-xs text-[var(--iron-400)]">
-          Starts as <span className="font-semibold text-[var(--ns-ink)]">Open</span>
-          . Confirm the time later from the list when it’s locked in. Joins ping
-          Discord.
+          Nothing posts to Discord until you tap{" "}
+          <span className="font-semibold text-[var(--ns-ink)]">
+            Share to Discord
+          </span>{" "}
+          and confirm.
         </p>
 
         {error ? (

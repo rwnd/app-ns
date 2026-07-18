@@ -88,9 +88,9 @@ function matchesQuery(trip: Trip, query: string): boolean {
   const q = query.trim().toLowerCase();
   const start = new Date(trip.startsAt);
   const haystack = [
-    trip.title,
     trip.source,
     trip.destination,
+    `${trip.source} ${trip.destination}`,
     trip.meetingPoint,
     trip.notes,
     trip.timeLabel,
