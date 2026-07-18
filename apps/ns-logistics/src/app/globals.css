@@ -65,3 +65,26 @@ body {
   background-size: 48px 48px, 64px 64px, 40px 40px;
   animation: soft-pulse 6s ease-in-out infinite;
 }
+
+.discord-cta {
+  background-color: #5865f2;
+}
+
+.discord-cta:hover {
+  background-color: #4752c4;
+}
+
+.field-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: #c4b5fd;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}

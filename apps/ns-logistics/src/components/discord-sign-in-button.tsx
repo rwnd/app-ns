@@ -5,12 +5,12 @@ export function DiscordSignInButton() {
     <form
       action={async () => {
         "use server";
-        await signIn("discord", { redirectTo: "/hello" });
+        await signIn("discord", { redirectTo: "/home" });
       }}
     >
       <button
         type="submit"
-        className="z-20 flex h-[50px] w-[260px] cursor-pointer items-center justify-center space-x-2 rounded-md bg-black font-bold text-white transition duration-300 ease-in-out hover:bg-gray-800"
+        className="discord-cta z-20 flex h-[50px] w-[280px] cursor-pointer items-center justify-center gap-2.5 rounded-md font-bold text-white shadow-sm transition duration-300 ease-in-out"
       >
         <DiscordIcon />
         <span className="text-lg">Continue with Discord</span>
@@ -22,8 +22,8 @@ export function DiscordSignInButton() {
 function DiscordIcon() {
   return (
     <svg
-      width="22"
-      height="22"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="currentColor"
       aria-hidden="true"

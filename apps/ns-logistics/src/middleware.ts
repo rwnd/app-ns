@@ -3,21 +3,23 @@ import { NextResponse } from "next/server";
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
-  const isHello = req.nextUrl.pathname.startsWith("/hello");
+  const path = req.nextUrl.pathname;
+  const isHome = path.startsWith("/home");
+  const isHello = path.startsWith("/hello");
 
-  if (isHello && !isLoggedIn) {
+  if ((isHome || isHello) && !isLoggedIn) {
     const loginUrl = new URL("/", req.nextUrl.origin);
     loginUrl.searchParams.set("error", "SessionRequired");
     return NextResponse.redirect(loginUrl);
   }
 
-  if (req.nextUrl.pathname === "/" && isLoggedIn) {
-    return NextResponse.redirect(new URL("/hello", req.nextUrl.origin));
+  if (isLoggedIn && (path === "/" || isHello)) {
+    return NextResponse.redirect(new URL("/home", req.nextUrl.origin));
   }
 
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: ["/", "/hello"],
+  matcher: ["/", "/home", "/hello"],
 };
