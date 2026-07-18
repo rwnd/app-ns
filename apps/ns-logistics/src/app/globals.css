@@ -165,10 +165,53 @@ body {
   flex-shrink: 0;
 }
 
+.trip-people {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.65rem;
+}
+
 .trip-sub {
-  margin: 0.45rem 0 0;
+  margin: 0;
   font-size: 0.8125rem;
   color: var(--iron-400);
+}
+
+.rider-stack {
+  display: flex;
+  align-items: center;
+}
+
+.rider-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 2px solid #fff;
+  background: var(--iron-100);
+  margin-left: -0.4rem;
+  box-shadow: 0 0 0 1px var(--iron-200);
+}
+
+.rider-stack .rider-avatar:first-child {
+  margin-left: 0;
+}
+
+.rider-avatar-fallback,
+.rider-avatar-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--ns-ink);
+  background: var(--iron-100);
+}
+
+.rider-avatar-more {
+  color: var(--iron-500);
 }
 
 .trip-actions {

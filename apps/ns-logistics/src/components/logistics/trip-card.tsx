@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { formatTripWhen } from "@/lib/trips/dates";
 import { isJoinable, seatsLeft } from "@/lib/trips/filter";
-import type { Trip, TripStatus } from "@/lib/trips/types";
+import type { Trip, TripPerson, TripStatus } from "@/lib/trips/types";
 
 type TripCardProps = {
   trip: Trip;
@@ -42,11 +42,15 @@ export function TripCard({
   const hasDetails = Boolean(
     trip.notes || trip.meetingPoint || trip.riders.length > 0,
   );
+  // Host + riders — who’s on this trip
+  const party = [trip.host, ...trip.riders];
+  const visibleParty = party.slice(0, 4);
+  const overflow = Math.max(party.length - visibleParty.length, 0);
+  const goingCount = trip.riders.length;
 
   return (
     <article className="trip-row group">
       <div className="flex items-start gap-4">
-        {/* Content — two clear lines, not a middot soup */}
         <div className="min-w-0 flex-1">
           <h3 className="trip-route">
             <span>{trip.source}</span>
@@ -74,28 +78,28 @@ export function TripCard({
             ) : null}
           </p>
 
-          <p className="trip-sub">
-            <span>{trip.host.name}</span>
-            {trip.riders.length > 0 ? (
-              <span> · {trip.riders.length} going</span>
-            ) : null}
-            {hasDetails ? (
-              <>
-                <span className="text-[var(--iron-300)]"> · </span>
-                <button
-                  type="button"
-                  onClick={() => setDetailsOpen((v) => !v)}
-                  className="font-medium text-[var(--ns-ink)] underline-offset-2 hover:underline"
-                  aria-expanded={detailsOpen}
-                >
-                  {detailsOpen ? "Hide" : "Details"}
-                </button>
-              </>
-            ) : null}
-          </p>
+          <div className="trip-people">
+            <RiderStack people={visibleParty} overflow={overflow} />
+            <p className="trip-sub">
+              <span>{trip.host.name}</span>
+              {goingCount > 0 ? <span> · {goingCount} going</span> : null}
+              {hasDetails ? (
+                <>
+                  <span className="text-[var(--iron-300)]"> · </span>
+                  <button
+                    type="button"
+                    onClick={() => setDetailsOpen((v) => !v)}
+                    className="font-medium text-[var(--ns-ink)] underline-offset-2 hover:underline"
+                    aria-expanded={detailsOpen}
+                  >
+                    {detailsOpen ? "Hide" : "Details"}
+                  </button>
+                </>
+              ) : null}
+            </p>
+          </div>
         </div>
 
-        {/* Primary action — one job, right-aligned */}
         <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5">
           {showJoinControl ? (
             <button
@@ -197,16 +201,52 @@ export function TripCard({
               {trip.notes}
             </p>
           ) : null}
-          {trip.riders.length > 0 ? (
-            <p>
-              <span className="trip-details-label">Going</span>
-              {trip.riders.map((r) => r.name).join(", ")}
-            </p>
-          ) : (
-            <p className="text-[var(--iron-400)]">No one else yet.</p>
-          )}
+          <p>
+            <span className="trip-details-label">Going</span>
+            {party.map((p) => p.name).join(", ")}
+          </p>
         </div>
       ) : null}
     </article>
+  );
+}
+
+function RiderStack({
+  people,
+  overflow,
+}: {
+  people: TripPerson[];
+  overflow: number;
+}) {
+  if (people.length === 0) return null;
+
+  return (
+    <div className="rider-stack" aria-hidden={false}>
+      {people.map((person) =>
+        person.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={person.id}
+            src={person.image}
+            alt={person.name}
+            title={person.name}
+            className="rider-avatar"
+          />
+        ) : (
+          <span
+            key={person.id}
+            title={person.name}
+            className="rider-avatar rider-avatar-fallback"
+          >
+            {person.name.charAt(0)}
+          </span>
+        ),
+      )}
+      {overflow > 0 ? (
+        <span className="rider-avatar rider-avatar-more" title={`+${overflow} more`}>
+          +{overflow}
+        </span>
+      ) : null}
+    </div>
   );
 }
