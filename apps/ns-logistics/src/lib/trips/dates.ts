@@ -72,6 +72,51 @@ export function formatClock(iso: string): string {
   });
 }
 
+/** Compact time for board prefix — flexible trips use short window label. */
+export function formatTripTimePrefix(trip: {
+  startsAt: string;
+  timePrecision: "exact" | "flexible";
+  timeLabel: string;
+}): string {
+  if (trip.timePrecision === "flexible") {
+    const label = trip.timeLabel.trim();
+    if (label) {
+      // Prefer last word of window: "Saturday evening" → "Evening"
+      const parts = label.split(/\s+/);
+      const last = parts[parts.length - 1] ?? label;
+      return last.charAt(0).toUpperCase() + last.slice(1);
+    }
+    return "Flex";
+  }
+  return formatClock(trip.startsAt);
+}
+
+/** Next N calendar days for filter chips, labeled Today (Sunday), etc. */
+export function upcomingDayChips(
+  count = 3,
+  now = new Date(),
+): { key: string; label: string }[] {
+  const chips: { key: string; label: string }[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const d = addDays(startOfDay(now), i);
+    const key = toDateKey(d);
+    const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
+    if (i === 0) chips.push({ key, label: `Today (${weekday})` });
+    else if (i === 1) chips.push({ key, label: `Tomorrow (${weekday})` });
+    else {
+      chips.push({
+        key,
+        label: d.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }),
+      });
+    }
+  }
+  return chips;
+}
+
 /** Display when for ride posts — prefers human label for flexible times. */
 export function formatTripWhen(trip: {
   startsAt: string;

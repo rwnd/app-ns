@@ -1,24 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ActivityPanel } from "@/components/logistics/activity-panel";
 import { CreateTripModal } from "@/components/logistics/create-trip-modal";
 import { DiscordConfirm } from "@/components/logistics/discord-confirm";
 import { TripCard } from "@/components/logistics/trip-card";
+import { useTrips } from "@/components/logistics/trips-provider";
 import {
+  DISCORD_THREADS_MOCK_ONLY,
   discordThreadTitle,
-  stubDiscordThreadUrl,
 } from "@/lib/trips/discord";
-import { formatDayLabel, parseDateKey } from "@/lib/trips/dates";
-import {
-  filterTrips,
-  groupTripsByDay,
-  isJoinable,
-} from "@/lib/trips/filter";
-import { createMockTrips } from "@/lib/trips/mock-data";
+import { formatDayLabel, parseDateKey, upcomingDayChips } from "@/lib/trips/dates";
+import { filterTrips, groupTripsByDay, isJoinable } from "@/lib/trips/filter";
 import type {
-  QuickRange,
-  Trip,
   TripCorridor,
   TripFilters,
   TripPerson,
@@ -35,7 +28,6 @@ type LogisticsHomeProps = {
 
 const defaultFilters: TripFilters = {
   query: "",
-  quickRange: "all",
   corridor: "all",
   selectedDate: null,
   timeMode: "upcoming",
@@ -47,17 +39,15 @@ type DiscordPrompt =
   | { kind: "mention"; tripId: string }
   | null;
 
-type MainTab = "trips" | "activity";
-
 export function LogisticsHome({ user }: LogisticsHomeProps) {
-  const [trips, setTrips] = useState<Trip[]>(() => createMockTrips());
+  const { trips, addTrip, toggleJoin, setStatus, attachMockThread } = useTrips();
   const [filters, setFilters] = useState<TripFilters>(defaultFilters);
-  const [tab, setTab] = useState<MainTab>("trips");
   const [createOpen, setCreateOpen] = useState(false);
   const [flashByTrip, setFlashByTrip] = useState<Record<string, string>>({});
   const [discordPrompt, setDiscordPrompt] = useState<DiscordPrompt>(null);
 
   const now = useMemo(() => new Date(), []);
+  const dayChips = useMemo(() => upcomingDayChips(3, now), [now]);
   const visibleTrips = useMemo(
     () => filterTrips(trips, filters, user.id, now),
     [trips, filters, user.id, now],
@@ -89,59 +79,35 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     }, 3500);
   }
 
-  function toggleJoin(tripId: string) {
-    setTrips((prev) =>
-      prev.map((trip) => {
-        if (trip.id !== tripId) return trip;
-        if (trip.host.id === user.id) return trip;
+  function handleToggleJoin(tripId: string) {
+    const trip = trips.find((t) => t.id === tripId);
+    if (!trip) return;
+    if (trip.host.id === user.id) return;
 
-        const joined = trip.riders.some((g) => g.id === user.id);
-        if (joined) {
-          return {
-            ...trip,
-            riders: trip.riders.filter((g) => g.id !== user.id),
-            status: trip.status === "full" ? "open" : trip.status,
-          };
-        }
+    const joined = trip.riders.some((g) => g.id === user.id);
+    if (!joined && !isJoinable(trip)) return;
 
-        if (!isJoinable(trip)) return trip;
+    toggleJoin(tripId, host);
 
-        const nextRiders = [...trip.riders, host];
-        const left =
-          trip.capacity === null
-            ? null
-            : Math.max(trip.capacity - nextRiders.length, 0);
-
-        if (trip.discordThreadUrl) {
-          flash(
-            tripId,
-            "You're going. Tap “Mention me” if you want a Discord ping.",
-          );
-        }
-
-        return {
-          ...trip,
-          riders: nextRiders,
-          status: left === 0 ? "full" : trip.status,
-        };
-      }),
-    );
+    if (!joined && trip.discordThreadUrl) {
+      flash(
+        tripId,
+        "You're going. Tap “Mention me” if you want a Discord ping.",
+      );
+    }
   }
 
-  function setStatus(tripId: string, status: TripStatus) {
-    setTrips((prev) =>
-      prev.map((trip) => {
-        if (trip.id !== tripId || trip.host.id !== user.id) return trip;
-        flash(
-          tripId,
-          status === "confirmed"
-            ? "Time confirmed."
-            : status === "cancelled"
-              ? "Trip cancelled."
-              : "Updated.",
-        );
-        return { ...trip, status };
-      }),
+  function handleSetStatus(tripId: string, status: TripStatus) {
+    const trip = trips.find((t) => t.id === tripId);
+    if (!trip || trip.host.id !== user.id) return;
+    setStatus(tripId, status);
+    flash(
+      tripId,
+      status === "confirmed"
+        ? "Time confirmed."
+        : status === "cancelled"
+          ? "Trip cancelled."
+          : "Updated.",
     );
   }
 
@@ -150,21 +116,37 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     const { kind, tripId } = discordPrompt;
 
     if (kind === "share") {
-      setTrips((prev) =>
-        prev.map((trip) => {
-          if (trip.id !== tripId) return trip;
-          const url = stubDiscordThreadUrl(trip);
-          flash(
-            tripId,
-            `Thread ready: “${discordThreadTitle(trip)}” (short-lived).`,
-          );
-          return { ...trip, discordThreadUrl: url };
-        }),
+      const trip = trips.find((t) => t.id === tripId);
+      attachMockThread(tripId);
+      flash(
+        tripId,
+        trip
+          ? DISCORD_THREADS_MOCK_ONLY
+            ? `Mock thread ready: “${discordThreadTitle(trip)}” — not posted to Discord.`
+            : `Thread ready: “${discordThreadTitle(trip)}”.`
+          : "Thread ready.",
       );
     } else {
-      flash(tripId, "Mention queued in the trip thread.");
+      flash(
+        tripId,
+        DISCORD_THREADS_MOCK_ONLY
+          ? "Mock mention queued (not posted)."
+          : "Mention queued in the trip thread.",
+      );
     }
     setDiscordPrompt(null);
+  }
+
+  function toggleCorridor(value: TripCorridor) {
+    updateFilters({
+      corridor: filters.corridor === value ? "all" : value,
+    });
+  }
+
+  function toggleDay(key: string) {
+    updateFilters({
+      selectedDate: filters.selectedDate === key ? null : key,
+    });
   }
 
   return (
@@ -193,21 +175,22 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-[var(--ns-ink)]">Trips</p>
             <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-[var(--iron-200)]">
               {(
                 [
-                  ["trips", "Trips"],
-                  ["activity", "Activity"],
+                  ["upcoming", "Upcoming"],
+                  ["past", "Past"],
                 ] as const
               ).map(([value, label]) => (
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setTab(value)}
+                  onClick={() => updateFilters({ timeMode: value })}
                   className={[
-                    "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
-                    tab === value
-                      ? "bg-[var(--ns-ink)] text-white"
+                    "rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                    filters.timeMode === value
+                      ? "bg-[var(--iron-100)] text-[var(--ns-ink)]"
                       : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
                   ].join(" ")}
                 >
@@ -215,38 +198,15 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                 </button>
               ))}
             </div>
-
-            {tab === "trips" ? (
-              <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-[var(--iron-200)]">
-                {(
-                  [
-                    ["upcoming", "Upcoming"],
-                    ["past", "Past"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => updateFilters({ timeMode: value })}
-                    className={[
-                      "rounded-full px-3 py-1.5 text-sm font-semibold transition",
-                      filters.timeMode === value
-                        ? "bg-[var(--iron-100)] text-[var(--ns-ink)]"
-                        : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
-                    ].join(" ")}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </div>
 
-          {tab === "trips" ? (
+          <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--iron-400)]">
+                Popular
+              </span>
               {(
                 [
-                  ["all", "All"],
                   ["airport", "Airport"],
                   ["singapore", "Singapore"],
                   ["local", "Local"],
@@ -255,31 +215,24 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                 <Chip
                   key={value}
                   active={filters.corridor === value}
-                  onClick={() =>
-                    updateFilters({
-                      corridor: value as TripCorridor | "all",
-                    })
-                  }
+                  onClick={() => toggleCorridor(value)}
                 >
                   {label}
                 </Chip>
               ))}
-              <span className="mx-0.5 hidden h-4 w-px bg-[var(--iron-200)] sm:block" />
-              {(
-                [
-                  ["all", "Any day"],
-                  ["today", "Today"],
-                  ["tomorrow", "Tomorrow"],
-                ] as const
-              ).map(([value, label]) => (
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--iron-400)]">
+                Days
+              </span>
+              {dayChips.map((chip) => (
                 <Chip
-                  key={value}
-                  active={filters.quickRange === value}
-                  onClick={() =>
-                    updateFilters({ quickRange: value as QuickRange })
-                  }
+                  key={chip.key}
+                  active={filters.selectedDate === chip.key}
+                  onClick={() => toggleDay(chip.key)}
                 >
-                  {label}
+                  {chip.label}
                 </Chip>
               ))}
               <Chip
@@ -291,90 +244,99 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                 Mine
               </Chip>
             </div>
-          ) : null}
+          </div>
         </div>
 
-        {tab === "trips" ? (
-          <div className="trip-board mt-3">
-            {grouped.length === 0 ? (
-              <div className="px-6 py-16 text-center">
-                <p className="text-base font-semibold text-[var(--ns-ink)]">
-                  No trips
-                </p>
-                <p className="mt-1 text-sm text-[var(--iron-500)]">
-                  Post from → to and when. Share to Discord only if you want.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setCreateOpen(true)}
-                  className="mt-4 rounded-full bg-[var(--ns-ink)] px-4 py-2 text-sm font-semibold text-white"
-                >
-                  + Post
-                </button>
+        <div className="trip-board mt-3">
+          {grouped.length === 0 ? (
+            <div className="px-6 py-16 text-center">
+              <p className="text-base font-semibold text-[var(--ns-ink)]">
+                No trips
+              </p>
+              <p className="mt-1 text-sm text-[var(--iron-500)]">
+                Post from → to and when. Discord stays optional.
+              </p>
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="mt-4 rounded-full bg-[var(--ns-ink)] px-4 py-2 text-sm font-semibold text-white"
+              >
+                + Post
+              </button>
+            </div>
+          ) : (
+            grouped.map((group) => (
+              <div key={group.key}>
+                <h2 className="trip-day">
+                  {formatDayLabel(parseDateKey(group.key), now)}
+                </h2>
+                {group.trips.map((trip) => (
+                  <TripCard
+                    key={trip.id}
+                    trip={trip}
+                    currentUserId={user.id}
+                    onToggleJoin={handleToggleJoin}
+                    onSetStatus={handleSetStatus}
+                    onShareDiscord={(id) =>
+                      setDiscordPrompt({ kind: "share", tripId: id })
+                    }
+                    onMentionDiscord={(id) =>
+                      setDiscordPrompt({ kind: "mention", tripId: id })
+                    }
+                    isPast={filters.timeMode === "past"}
+                    flash={flashByTrip[trip.id] ?? null}
+                  />
+                ))}
               </div>
-            ) : (
-              grouped.map((group) => (
-                <div key={group.key}>
-                  <h2 className="trip-day">
-                    {formatDayLabel(parseDateKey(group.key), now)}
-                  </h2>
-                  {group.trips.map((trip) => (
-                    <TripCard
-                      key={trip.id}
-                      trip={trip}
-                      currentUserId={user.id}
-                      onToggleJoin={toggleJoin}
-                      onSetStatus={setStatus}
-                      onShareDiscord={(id) =>
-                        setDiscordPrompt({ kind: "share", tripId: id })
-                      }
-                      onMentionDiscord={(id) =>
-                        setDiscordPrompt({ kind: "mention", tripId: id })
-                      }
-                      isPast={filters.timeMode === "past"}
-                      flash={flashByTrip[trip.id] ?? null}
-                    />
-                  ))}
-                </div>
-              ))
-            )}
-          </div>
-        ) : (
-          <div className="mt-3 rounded-2xl border border-[var(--iron-200)] bg-white px-5 py-6 sm:px-6">
-            <ActivityPanel trips={trips} now={now} />
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
 
       <CreateTripModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreate={(trip) => {
-          setTrips((prev) => [trip, ...prev]);
-          setTab("trips");
-          updateFilters({ timeMode: "upcoming", quickRange: "all" });
+          addTrip(trip);
+          updateFilters({ timeMode: "upcoming", selectedDate: null });
         }}
         host={host}
       />
 
       <DiscordConfirm
         open={discordPrompt?.kind === "share"}
-        title="Create a #logistics thread?"
+        title={
+          DISCORD_THREADS_MOCK_ONLY
+            ? "Attach a mock Discord thread?"
+            : "Create a #logistics thread?"
+        }
         body={
           promptTrip
-            ? `Opens one short-lived thread: “${discordThreadTitle(promptTrip)}”. Joins stay in the thread — the channel won’t flood.`
-            : "Create a short-lived thread for this trip."
+            ? DISCORD_THREADS_MOCK_ONLY
+              ? `Stores a stub link for “${discordThreadTitle(promptTrip)}”. No real Discord thread is created yet.`
+              : `Opens one short-lived thread: “${discordThreadTitle(promptTrip)}”.`
+            : DISCORD_THREADS_MOCK_ONLY
+              ? "Stores a stub Discord link only — nothing is posted."
+              : "Create a short-lived thread for this trip."
         }
-        confirmLabel="Create thread"
+        confirmLabel={DISCORD_THREADS_MOCK_ONLY ? "Add mock thread" : "Create thread"}
         onConfirm={confirmDiscord}
         onCancel={() => setDiscordPrompt(null)}
       />
 
       <DiscordConfirm
         open={discordPrompt?.kind === "mention"}
-        title="Mention you in the thread?"
-        body="Posts a single line in the trip thread — not the main channel."
-        confirmLabel="Mention me"
+        title={
+          DISCORD_THREADS_MOCK_ONLY
+            ? "Mock mention you in the thread?"
+            : "Mention you in the thread?"
+        }
+        body={
+          DISCORD_THREADS_MOCK_ONLY
+            ? "UI-only for now — nothing is posted to Discord."
+            : "Posts a single line in the trip thread — not the main channel."
+        }
+        confirmLabel={DISCORD_THREADS_MOCK_ONLY ? "Mock mention" : "Mention me"}
         onConfirm={confirmDiscord}
         onCancel={() => setDiscordPrompt(null)}
       />

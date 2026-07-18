@@ -129,16 +129,82 @@ body {
 }
 
 .trip-route {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.4rem;
+  display: inline;
   margin: 0;
   font-size: 1.0625rem;
   font-weight: 600;
   letter-spacing: -0.015em;
   line-height: 1.3;
   color: var(--ns-ink);
+}
+
+.trip-route > span + .trip-arrow {
+  margin: 0 0.35rem;
+}
+
+.trip-row-main {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.trip-row-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--iron-400);
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trip-row-caret:hover {
+  background: var(--iron-100);
+  color: var(--ns-ink);
+}
+
+.trip-status-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--iron-100);
+  color: var(--iron-500);
+}
+
+.trip-status-chip--tentative {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.trip-status-chip--confirmed {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.trip-status-chip--flexible {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+.trip-status-chip--full {
+  background: var(--iron-100);
+  color: var(--ns-ink);
+}
+
+.trip-status-chip--cancelled {
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 .trip-arrow {

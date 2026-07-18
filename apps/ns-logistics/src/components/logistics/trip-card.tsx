@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { formatTripWhen } from "@/lib/trips/dates";
+import { formatTripTimePrefix } from "@/lib/trips/dates";
+import { DISCORD_THREADS_MOCK_ONLY } from "@/lib/trips/discord";
 import { isJoinable, seatsLeft } from "@/lib/trips/filter";
-import type { Trip, TripPerson, TripStatus } from "@/lib/trips/types";
+import { tripStatusChip, type Trip, type TripPerson, type TripStatus } from "@/lib/trips/types";
 
 type TripCardProps = {
   trip: Trip;
@@ -16,13 +17,21 @@ type TripCardProps = {
   flash?: string | null;
 };
 
-function howLine(trip: Trip): string {
+function howLine(trip: Trip): string | null {
   if (trip.intent === "request") return "Looking";
   const left = seatsLeft(trip);
-  if (trip.capacity === null) return "Offering";
+  if (trip.capacity === null) return null;
   if (left === null) return `${trip.capacity} seats`;
   return `${left} of ${trip.capacity} left`;
 }
+
+const CHIP_LABEL: Record<ReturnType<typeof tripStatusChip>, string> = {
+  tentative: "Tentative",
+  confirmed: "Confirmed",
+  flexible: "Flexible",
+  full: "Full",
+  cancelled: "Cancelled",
+};
 
 export function TripCard({
   trip,
@@ -34,81 +43,90 @@ export function TripCard({
   isPast = false,
   flash = null,
 }: TripCardProps) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const isHost = trip.host.id === currentUserId;
   const joined = trip.riders.some((g) => g.id === currentUserId);
-  const showJoinControl =
-    !isPast && !isHost && (joined || isJoinable(trip));
-  const hasDetails = Boolean(
-    trip.notes || trip.meetingPoint || trip.riders.length > 0,
-  );
-  // Host + riders — who’s on this trip
-  const party = [trip.host, ...trip.riders];
-  const visibleParty = party.slice(0, 4);
-  const overflow = Math.max(party.length - visibleParty.length, 0);
+  const showJoinControl = !isPast && !isHost && (joined || isJoinable(trip));
   const goingCount = trip.riders.length;
+  const seats = howLine(trip);
+  const chip = tripStatusChip(trip);
+  const timePrefix = formatTripTimePrefix(trip);
+  // Match "N going": riders only — not the host.
+  const visibleRiders = trip.riders.slice(0, 3);
+  const overflow = Math.max(trip.riders.length - visibleRiders.length, 0);
 
   return (
-    <article className="trip-row group">
-      <div className="flex items-start gap-4">
-        <div className="min-w-0 flex-1">
-          <h3 className="trip-route">
-            <span>{trip.source}</span>
-            <span className="trip-arrow" aria-hidden="true">
-              →
+    <article className={`trip-row ${open ? "trip-row--open" : ""}`}>
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          className="trip-row-main min-w-0 flex-1 text-left"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="shrink-0 text-sm font-medium tabular-nums text-[var(--iron-500)]">
+              {timePrefix}
             </span>
-            <span>{trip.destination}</span>
-          </h3>
-
-          <p className="trip-meta">
-            <span>{formatTripWhen(trip)}</span>
-            <span className="trip-dot" aria-hidden="true" />
-            <span>{howLine(trip)}</span>
-            {trip.timePrecision === "flexible" ? (
-              <>
-                <span className="trip-dot" aria-hidden="true" />
-                <span>Flexible</span>
-              </>
-            ) : null}
-            {trip.status !== "open" ? (
-              <>
-                <span className="trip-dot" aria-hidden="true" />
-                <span className="capitalize">{trip.status}</span>
-              </>
-            ) : null}
-          </p>
+            <h3 className="trip-route inline">
+              <span>{trip.source}</span>
+              <span className="trip-arrow" aria-hidden="true">
+                →
+              </span>
+              <span>{trip.destination}</span>
+            </h3>
+            <span className="text-sm text-[var(--iron-500)]">
+              · {goingCount} going
+            </span>
+            <span className={`trip-status-chip trip-status-chip--${chip}`}>
+              {CHIP_LABEL[chip]}
+            </span>
+          </div>
 
           <div className="trip-people">
-            <RiderStack people={visibleParty} overflow={overflow} />
-            <p className="trip-sub">
-              <span>{trip.host.name}</span>
-              {goingCount > 0 ? <span> · {goingCount} going</span> : null}
-              {hasDetails ? (
-                <>
-                  <span className="text-[var(--iron-300)]"> · </span>
-                  <button
-                    type="button"
-                    onClick={() => setDetailsOpen((v) => !v)}
-                    className="font-medium text-[var(--ns-ink)] underline-offset-2 hover:underline"
-                    aria-expanded={detailsOpen}
-                  >
-                    {detailsOpen ? "Hide" : "Details"}
-                  </button>
-                </>
-              ) : null}
-            </p>
+            {goingCount > 0 ? (
+              <RiderStack people={visibleRiders} overflow={overflow} />
+            ) : (
+              <span className="trip-sub">No one yet</span>
+            )}
+            {seats ? <span className="trip-sub">{seats}</span> : null}
+            {isHost ? <span className="trip-sub font-medium text-[var(--ns-ink)]">Yours</span> : null}
+            {joined && !isHost ? (
+              <span className="trip-sub font-medium text-[var(--ns-ink)]">You&apos;re in</span>
+            ) : null}
           </div>
-        </div>
+        </button>
 
         <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5">
+          <button
+            type="button"
+            className="trip-row-caret"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Hide details" : "Show details"}
+            aria-expanded={open}
+          >
+            {open ? "▴" : "▾"}
+          </button>
+
           {showJoinControl ? (
             <button
               type="button"
               onClick={() => onToggleJoin(trip.id)}
               className={joined ? "btn-secondary" : "btn-primary"}
             >
-              {joined ? "Going. Cancel." : "I'm in"}
+              {joined ? "Leave" : "I'm in"}
             </button>
+          ) : null}
+
+          {!isPast && trip.discordThreadUrl ? (
+            <a
+              href={trip.discordThreadUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-link-discord"
+            >
+              Discord{DISCORD_THREADS_MOCK_ONLY ? " (mock)" : ""}
+            </a>
           ) : null}
 
           {!isPast && isHost && !trip.discordThreadUrl ? (
@@ -117,78 +135,20 @@ export function TripCard({
               onClick={() => onShareDiscord(trip.id)}
               className="btn-discord"
             >
-              Share to Discord
+              Discord{DISCORD_THREADS_MOCK_ONLY ? " (mock)" : ""}
             </button>
-          ) : null}
-
-          {!isPast && isHost && trip.discordThreadUrl ? (
-            <a
-              href={trip.discordThreadUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-link-discord"
-            >
-              Open thread
-            </a>
           ) : null}
 
           {isPast ? <span className="trip-ended">Ended</span> : null}
         </div>
       </div>
 
-      {/* Secondary host / rider actions — quiet text row */}
-      {!isPast && (isHost || (joined && trip.discordThreadUrl)) ? (
-        <div className="trip-actions">
-          {joined && !isHost && trip.discordThreadUrl ? (
-            <>
-              <a
-                href={trip.discordThreadUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-link-discord"
-              >
-                Thread
-              </a>
-              <button
-                type="button"
-                onClick={() => onMentionDiscord(trip.id)}
-                className="btn-text"
-              >
-                Mention me
-              </button>
-            </>
-          ) : null}
-          {isHost && trip.status === "open" ? (
-            <button
-              type="button"
-              onClick={() => onSetStatus(trip.id, "confirmed")}
-              className="btn-text"
-            >
-              Confirm time
-            </button>
-          ) : null}
-          {isHost && trip.status !== "cancelled" ? (
-            <button
-              type="button"
-              onClick={() => onSetStatus(trip.id, "cancelled")}
-              className="btn-text-danger"
-            >
-              Cancel trip
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {joined && !isHost ? (
-        <p className="trip-hint">
-          Discord mentions are opt-in — nothing posts unless you confirm.
-        </p>
-      ) : null}
-
-      {flash ? <p className="trip-flash">{flash}</p> : null}
-
-      {detailsOpen ? (
+      {open ? (
         <div className="trip-details">
+          <p>
+            <span className="trip-details-label">Host</span>
+            {trip.host.name}
+          </p>
           {trip.meetingPoint ? (
             <p>
               <span className="trip-details-label">Meet</span>
@@ -203,10 +163,66 @@ export function TripCard({
           ) : null}
           <p>
             <span className="trip-details-label">Going</span>
-            {party.map((p) => p.name).join(", ")}
+            {goingCount === 0
+              ? "No one yet"
+              : trip.riders.map((p) => p.name).join(", ")}
           </p>
+          {trip.discordThreadUrl ? (
+            <p>
+              <span className="trip-details-label">Thread</span>
+              <a
+                href={trip.discordThreadUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-link-discord"
+              >
+                Open Discord thread
+                {DISCORD_THREADS_MOCK_ONLY ? " (mock)" : ""}
+              </a>
+            </p>
+          ) : null}
+
+          {!isPast && (isHost || (joined && trip.discordThreadUrl)) ? (
+            <div className="trip-actions !mt-2">
+              {joined && !isHost && trip.discordThreadUrl ? (
+                <button
+                  type="button"
+                  onClick={() => onMentionDiscord(trip.id)}
+                  className="btn-text"
+                >
+                  Mention me
+                </button>
+              ) : null}
+              {isHost && trip.status === "open" ? (
+                <button
+                  type="button"
+                  onClick={() => onSetStatus(trip.id, "confirmed")}
+                  className="btn-text"
+                >
+                  Confirm time
+                </button>
+              ) : null}
+              {isHost && trip.status !== "cancelled" ? (
+                <button
+                  type="button"
+                  onClick={() => onSetStatus(trip.id, "cancelled")}
+                  className="btn-text-danger"
+                >
+                  Cancel trip
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
+
+      {joined && !isHost && !open ? (
+        <p className="trip-hint">
+          Discord mentions are opt-in — nothing posts unless you confirm.
+        </p>
+      ) : null}
+
+      {flash ? <p className="trip-flash">{flash}</p> : null}
     </article>
   );
 }
@@ -221,7 +237,7 @@ function RiderStack({
   if (people.length === 0) return null;
 
   return (
-    <div className="rider-stack" aria-hidden={false}>
+    <div className="rider-stack">
       {people.map((person) =>
         person.image ? (
           // eslint-disable-next-line @next/next/no-img-element

@@ -117,19 +117,6 @@ function formatLooseDate(date: Date): string {
   return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${toDateKey(date)}`;
 }
 
-function matchesQuickRange(
-  trip: Trip,
-  quickRange: TripFilters["quickRange"],
-  now: Date,
-): boolean {
-  if (quickRange === "all") return true;
-  const start = startOfDay(new Date(trip.startsAt));
-  if (quickRange === "today") {
-    return start.getTime() === startOfDay(now).getTime();
-  }
-  return start.getTime() === startOfDay(addDays(now, 1)).getTime();
-}
-
 export function filterTrips(
   trips: Trip[],
   filters: TripFilters,
@@ -155,7 +142,6 @@ export function filterTrips(
     }
 
     if (!matchesQuery(trip, filters.query)) return false;
-    if (!matchesQuickRange(trip, filters.quickRange, now)) return false;
 
     if (filters.corridor !== "all") {
       if (tripCorridor(trip.source, trip.destination) !== filters.corridor) {

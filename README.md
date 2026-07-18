@@ -8,7 +8,7 @@ Monorepo for Network School apps.
 
 Ride board for shared trips to/from Network School (airport, Singapore, JB, Eco Botanica).
 
-**Product:** a ride **board** — from → to, when, how. **I'm in** / **Going. Cancel.** Optional details. No calendar, no hero, no thumbnails. **Trips** + light **Activity** (counts / place volume). Discord is **opt-in** (short-lived `#logistics` threads).
+**Product:** a ride **board** — from → to, when, how. **I'm in** / leave. Optional details. No calendar, no hero, no thumbnails. **Trips** (`/home`) + **Stats** (`/stats`) in the top bar. Discord is **opt-in**; thread links are **mock-only** until a bot is wired.
 
 **Stack:** Next.js (App Router) · React · TypeScript · Tailwind · Auth.js (Discord)
 
@@ -26,8 +26,9 @@ pnpm dev
 Open [http://localhost:3000](http://localhost:3000).
 
 - Login: `/`
-- App (auth required): `/home`
-- Design preview (no auth): `/preview`
+- Trips (auth required): `/home`
+- Stats (auth required): `/stats`
+- Design preview (no auth): `/preview`, `/preview/stats`
 
 ### Discord app config
 

@@ -385,11 +385,9 @@ export function CreateTripModal({
         </div>
 
         <p className="mt-3 text-xs text-[var(--iron-400)]">
-          Nothing posts to Discord until you tap{" "}
-          <span className="font-semibold text-[var(--ns-ink)]">
-            Share to Discord
-          </span>{" "}
-          and confirm.
+          Discord is optional. For now, “Discord” only attaches a{" "}
+          <span className="font-semibold text-[var(--ns-ink)]">mock thread</span>{" "}
+          link — nothing is posted to a real channel.
         </p>
 
         {error ? (

@@ -15,7 +15,7 @@ export type TripLocation =
 export type TripIntent = "offer" | "request";
 
 /**
- * open — posted; time may still be fuzzy
+ * open — tentative; time may still move
  * confirmed — host locked departure
  * full — no more riders
  * cancelled — called off
@@ -31,7 +31,7 @@ export type TripCorridor = "airport" | "singapore" | "local";
 
 /**
  * Lightweight ride post. Route + when + how are primary;
- * notes/meeting/seats live in an accordion. Discord is opt-in.
+ * notes/meeting/seats live in an accordion. Discord is opt-in (mock for now).
  */
 export type Trip = {
   id: string;
@@ -50,19 +50,18 @@ export type Trip = {
   /** null = no seat limit. */
   capacity: number | null;
   /**
-   * Short-lived Discord thread in #logistics, created only after host confirms.
-   * Pattern: `{From}→{To} · {when} · {host}`
+   * Mock or real Discord thread URL. Created only after host confirms share.
+   * With DISCORD_THREADS_MOCK_ONLY, this is a stub link only.
    */
   discordThreadUrl: string | null;
 };
 
-export type QuickRange = "all" | "today" | "tomorrow";
 export type TimeMode = "upcoming" | "past";
 
 export type TripFilters = {
   query: string;
-  quickRange: QuickRange;
   corridor: TripCorridor | "all";
+  /** YYYY-MM-DD or null for any day */
   selectedDate: string | null;
   timeMode: TimeMode;
   myTripsOnly: boolean;
@@ -74,3 +73,19 @@ export type TripStats = {
   open: number;
   plannedTotal: number;
 };
+
+/** Chip shown on the board: tentative | confirmed | flexible | full | cancelled */
+export type TripStatusChip =
+  | "tentative"
+  | "confirmed"
+  | "flexible"
+  | "full"
+  | "cancelled";
+
+export function tripStatusChip(trip: Trip): TripStatusChip {
+  if (trip.status === "cancelled") return "cancelled";
+  if (trip.status === "full") return "full";
+  if (trip.timePrecision === "flexible") return "flexible";
+  if (trip.status === "confirmed") return "confirmed";
+  return "tentative";
+}
