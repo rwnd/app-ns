@@ -23,6 +23,10 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+- Login: `/`
+- App (auth required): `/home`
+- Design preview (no auth): `/preview`
+
 ### Discord app config
 
 1. Create an app at [Discord Developer Portal](https://discord.com/developers/applications)
