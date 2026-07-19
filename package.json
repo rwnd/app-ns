@@ -1,0 +1,14 @@
+{
+  "name": "app-ns",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter ns-logistics dev",
+    "build": "pnpm --filter ns-logistics build",
+    "start": "pnpm --filter ns-logistics start",
+    "lint": "pnpm --filter ns-logistics lint"
+  },
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,41 @@
+"use client";
+
+import { AppTopbar } from "@/components/app-topbar";
+import { TripsProvider } from "@/components/logistics/trips-provider";
+
+type BoardShellProps = {
+  user: {
+    id?: string | null;
+    name?: string | null;
+    image?: string | null;
+    email?: string | null;
+  };
+  basePath?: "/home" | "/preview";
+  banner?: React.ReactNode;
+  children: React.ReactNode;
+};
+
+/** Shared trip state + top bar for Trips and Stats routes. */
+export function BoardShell({
+  user,
+  basePath = "/home",
+  banner,
+  children,
+}: BoardShellProps) {
+  const seedUser =
+    basePath === "/preview" && user.id
+      ? {
+          id: user.id,
+          name: user.name ?? "You",
+          image: user.image,
+        }
+      : null;
+
+  return (
+    <TripsProvider seedUser={seedUser}>
+      {banner}
+      <AppTopbar user={user} basePath={basePath} />
+      {children}
+    </TripsProvider>
+  );
+}
