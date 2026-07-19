@@ -221,7 +221,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                   className={[
                     "rounded-full px-3 py-1.5 text-sm font-semibold transition",
                     filters.myTripsOnly === mineOnly
-                      ? "bg-[var(--ns-ink)] text-white"
+                      ? "bg-[var(--iron-100)] text-[var(--ns-ink)]"
                       : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
                   ].join(" ")}
                 >
