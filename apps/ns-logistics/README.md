@@ -1,9 +1,10 @@
-# NS Logistics
+# Hop
 
 Ride board for Network School trips (airport, Singapore, JB, Eco Botanica).
 
 ## Product
 
+- **Hop** — short rides between NS hubs
 - **Trips** (`/home`) — from → to, when, transport (car / bus / both), optional seats
 - **Stats** (`/stats`) — corridor and place volume
 - One trip type (no offer vs request). Join with **I'm in**

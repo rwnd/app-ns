@@ -15,9 +15,9 @@ const body = Source_Sans_3({
 });
 
 export const metadata: Metadata = {
-  title: "NS Logistics",
+  title: "Hop",
   description:
-    "Coordinate trips to and from Network School — airport, Eco Botanica, Singapore, and more.",
+    "Hop — coordinate rides to and from Network School: airport, Eco Botanica, Singapore, and more.",
 };
 
 export default function RootLayout({

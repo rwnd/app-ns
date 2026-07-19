@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NsLogo } from "@/components/ns-logo";
+import { HopLogo } from "@/components/hop-logo";
 import { SignOutButton } from "@/components/sign-out-button";
 
 type AppTopbarProps = {
@@ -34,9 +34,9 @@ export function AppTopbar({ user, basePath = "/home" }: AppTopbarProps) {
           <Link
             href={homeHref}
             className="flex items-center"
-            aria-label="NS Logistics home"
+            aria-label="Hop home"
           >
-            <NsLogo className="h-5 w-auto text-[var(--ns-ink)]" />
+            <HopLogo />
           </Link>
 
           <nav className="flex items-center gap-1" aria-label="Main">

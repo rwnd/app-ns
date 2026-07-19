@@ -4,11 +4,11 @@ Monorepo for Network School apps.
 
 ## Apps
 
-### `ns-logistics`
+### `ns-logistics` (Hop)
 
-Ride board for shared trips to/from Network School (airport, Singapore, JB, Eco Botanica).
+**Hop** — ride board for Network School trips (airport, Singapore, JB, Eco Botanica).
 
-**Product:** a ride **board** — from → to, when, transport (car / bus / both), optional seats. One trip type (no offer vs request). **I'm in** / leave. **Trips** (`/home`) + **Stats** (`/stats`). Discord is **opt-in**; thread links are **mock-only** until a bot is wired.
+**Product:** from → to, when, transport (car / bus / both), optional seats. One trip type. **I'm in** / leave. **Trips** (`/home`) + **Stats** (`/stats`). Discord is **opt-in**; thread links are **mock-only** until a bot is wired.
 
 **Stack:** Next.js (App Router) · React · TypeScript · Tailwind · Auth.js (Discord)
 

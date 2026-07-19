@@ -28,10 +28,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               Network School
             </p>
             <h1 className="font-display z-20 pb-0 text-[44px] font-bold leading-[52px] drop-shadow-xl animate-[rise-in_0.7s_ease-out] md:pb-2.5 md:text-6xl md:leading-[84px] lg:text-8xl lg:leading-[100px]">
-              NS Logistics
+              Hop
             </h1>
             <h4 className="z-20 max-w-xl pb-3 text-xl text-gray-800 animate-[fade-in_0.8s_ease-out] md:pb-8 md:text-3xl">
-              Coordinate rides to and from NS together.
+              Short rides between NS, the airport, and the city.
             </h4>
 
             <div className="z-20 flex w-full flex-col items-center gap-5 animate-[fade-in_1s_ease-out]">
