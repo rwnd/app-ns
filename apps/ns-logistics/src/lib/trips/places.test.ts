@@ -11,12 +11,16 @@ assert.equal(placeEquals("Singapore", "Singapore"), true);
 assert.equal(placeEquals("Singapore", "singapore"), false, "case-sensitive");
 assert.equal(placeEquals("JB Sentral", "JB  Sentral"), true, "format then match");
 
-const bad = parsePlaceName("changi airport");
-assert.equal(bad.ok, false);
+const titled = parsePlaceName("changi airport");
+assert.equal(titled.ok, true);
+if (titled.ok) assert.equal(titled.value, "Changi Airport");
 
 const good = parsePlaceName("  Changi Airport ");
 assert.equal(good.ok, true);
 if (good.ok) assert.equal(good.value, "Changi Airport");
+
+const bad = parsePlaceName("@@@");
+assert.equal(bad.ok, false);
 
 const ranked = popularPlacesFromTrips(
   [

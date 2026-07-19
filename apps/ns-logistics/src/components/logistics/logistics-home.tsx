@@ -271,9 +271,9 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
           </div>
         </div>
 
-        <div className="trip-board mt-3">
+        <div className="mt-3 space-y-4">
           {grouped.length === 0 ? (
-            <div className="px-6 py-16 text-center">
+            <div className="trip-day-card px-6 py-16 text-center">
               <p className="text-base font-semibold text-[var(--ns-ink)]">
                 No trips
               </p>
@@ -290,28 +290,30 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
             </div>
           ) : (
             grouped.map((group) => (
-              <div key={group.key}>
+              <section key={group.key} className="trip-day-card">
                 <h2 className="trip-day">
                   {formatDayLabel(parseDateKey(group.key), now)}
                 </h2>
-                {group.trips.map((trip) => (
-                  <TripCard
-                    key={trip.id}
-                    trip={trip}
-                    currentUserId={user.id}
-                    onToggleJoin={handleToggleJoin}
-                    onSetStatus={handleSetStatus}
-                    onShareDiscord={(id) =>
-                      setDiscordPrompt({ kind: "share", tripId: id })
-                    }
-                    onMentionDiscord={(id) =>
-                      setDiscordPrompt({ kind: "mention", tripId: id })
-                    }
-                    isPast={filters.timeMode === "past"}
-                    flash={flashByTrip[trip.id] ?? null}
-                  />
-                ))}
-              </div>
+                <div className="trip-day-list">
+                  {group.trips.map((trip) => (
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      currentUserId={user.id}
+                      onToggleJoin={handleToggleJoin}
+                      onSetStatus={handleSetStatus}
+                      onShareDiscord={(id) =>
+                        setDiscordPrompt({ kind: "share", tripId: id })
+                      }
+                      onMentionDiscord={(id) =>
+                        setDiscordPrompt({ kind: "mention", tripId: id })
+                      }
+                      isPast={filters.timeMode === "past"}
+                      flash={flashByTrip[trip.id] ?? null}
+                    />
+                  ))}
+                </div>
+              </section>
             ))
           )}
         </div>
@@ -325,6 +327,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
           updateFilters({ timeMode: "upcoming", selectedDate: null });
         }}
         host={host}
+        placeSuggestions={popular.map((p) => p.place)}
       />
 
       <DiscordConfirm

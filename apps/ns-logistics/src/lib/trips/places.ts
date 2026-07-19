@@ -54,26 +54,43 @@ export type ParsePlaceResult =
   | { ok: true; value: string }
   | { ok: false; error: string };
 
+/** Soft title-case for free-typed places (keeps existing capitals). */
+export function softTitleCasePlace(raw: string): string {
+  return formatPlaceName(raw).replace(/\b([a-z])/g, (ch) => ch.toUpperCase());
+}
+
 /**
  * Validate + format a place for save. Canonicalizes to KNOWN_PLACES on
  * case-sensitive exact match; otherwise accepts new names that pass the regex.
+ * Free-typed input is soft title-cased when needed.
  */
 export function parsePlaceName(
   raw: string,
   knownPlaces: readonly string[] = KNOWN_PLACES,
 ): ParsePlaceResult {
-  const formatted = formatPlaceName(raw);
+  let formatted = formatPlaceName(raw);
   if (!formatted) {
     return { ok: false, error: "Place is required." };
   }
   if (formatted.length > 48) {
     return { ok: false, error: "Place name must be 48 characters or fewer." };
   }
+
+  for (const known of knownPlaces) {
+    if (placeEquals(formatted, known)) {
+      return { ok: true, value: known };
+    }
+  }
+
+  if (!PLACE_NAME_PATTERN.test(formatted)) {
+    formatted = softTitleCasePlace(formatted);
+  }
+
   if (!PLACE_NAME_PATTERN.test(formatted)) {
     return {
       ok: false,
       error:
-        "Place must start with a capital letter and use letters, numbers, spaces, or .' - only.",
+        "Place must use letters, numbers, spaces, or .' - only (e.g. Changi Airport).",
     };
   }
 

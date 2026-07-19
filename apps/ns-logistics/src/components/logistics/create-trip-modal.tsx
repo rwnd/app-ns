@@ -5,43 +5,35 @@ import {
   CORRIDOR_PRESETS,
   LOCATIONS,
   MAX_PLAN_DAYS,
-  TIME_WINDOWS,
   TRANSPORT_MODES,
 } from "@/lib/trips/constants";
 import {
   addDays,
-  endOfDay,
+  formatClock,
   parseDateKey,
-  parseDatetimeLocalValue,
-  toDatetimeLocalValue,
   toDateKey,
+  toDatetimeLocalValue,
 } from "@/lib/trips/dates";
 import { isWithinPlanWindow } from "@/lib/trips/filter";
-import {
-  formatPlaceName,
-  parsePlaceName,
-  placeEquals,
-} from "@/lib/trips/places";
-import type {
-  TimePrecision,
-  TimeWindow,
-  TransportMode,
-  Trip,
-  TripLocation,
-  TripPerson,
-} from "@/lib/trips/types";
+import { KNOWN_PLACES, parsePlaceName, placeEquals } from "@/lib/trips/places";
+import type { TransportMode, Trip, TripPerson } from "@/lib/trips/types";
+import { PlaceAutocomplete } from "./place-autocomplete";
 
 type CreateTripModalProps = {
   open: boolean;
   onClose: () => void;
   onCreate: (trip: Trip) => void;
   host: TripPerson;
+  /** Extra place suggestions (e.g. popular from the board). */
+  placeSuggestions?: string[];
 };
 
-function defaultExactLocal(): string {
+function defaultWhen(): { day: string; time: string } {
   const d = new Date();
   d.setMinutes(d.getMinutes() + 60, 0, 0);
-  return toDatetimeLocalValue(d);
+  const local = toDatetimeLocalValue(d);
+  const [day, time] = local.split("T") as [string, string];
+  return { day, time };
 }
 
 export function CreateTripModal({
@@ -49,28 +41,33 @@ export function CreateTripModal({
   onClose,
   onCreate,
   host,
+  placeSuggestions = [],
 }: CreateTripModalProps) {
-  const maxDate = useMemo(() => {
-    const d = endOfDay(addDays(new Date(), MAX_PLAN_DAYS));
-    return toDatetimeLocalValue(d);
-  }, []);
-  const minDate = useMemo(() => toDatetimeLocalValue(new Date()), []);
   const maxDay = useMemo(() => toDateKey(addDays(new Date(), MAX_PLAN_DAYS)), []);
   const minDay = useMemo(() => toDateKey(new Date()), []);
+  const initial = useMemo(() => defaultWhen(), []);
 
-  const [source, setSource] = useState<TripLocation>("Network School");
-  const [destination, setDestination] =
-    useState<TripLocation>("Changi Airport");
-  const [precision, setPrecision] = useState<TimePrecision>("exact");
-  const [startsAt, setStartsAt] = useState(defaultExactLocal);
-  const [day, setDay] = useState(minDay);
-  const [windowId, setWindowId] = useState<TimeWindow>("evening");
+  const [source, setSource] = useState("Network School");
+  const [destination, setDestination] = useState("Changi Airport");
+  const [day, setDay] = useState(initial.day);
+  const [time, setTime] = useState(initial.time);
+  const [flexible, setFlexible] = useState(false);
   const [transport, setTransport] = useState<TransportMode[]>(["car"]);
   const [notes, setNotes] = useState("");
-  const [meetingPoint, setMeetingPoint] = useState("");
   const [capacity, setCapacity] = useState<string>("");
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const suggestions = useMemo(() => {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    for (const place of [...placeSuggestions, ...KNOWN_PLACES, ...LOCATIONS]) {
+      if (!seen.has(place)) {
+        seen.add(place);
+        list.push(place);
+      }
+    }
+    return list;
+  }, [placeSuggestions]);
 
   if (!open) return null;
 
@@ -106,58 +103,37 @@ export function CreateTripModal({
       return;
     }
 
-    let start: Date;
-    let end: Date;
-    let timeLabel = "";
-
-    if (precision === "exact") {
-      start = parseDatetimeLocalValue(startsAt);
-      if (Number.isNaN(start.getTime())) {
-        setError("Pick a valid start time.");
-        return;
-      }
-      if (!isWithinPlanWindow(start)) {
-        setError(
-          `Start time must be from now up to ${MAX_PLAN_DAYS} days ahead.`,
-        );
-        return;
-      }
-      end = new Date(start.getTime() + 90 * 60 * 1000);
-    } else {
-      const win = TIME_WINDOWS.find((w) => w.id === windowId)!;
-      const base = parseDateKey(day);
-      if (Number.isNaN(base.getTime())) {
-        setError("Pick a valid day.");
-        return;
-      }
-      start = new Date(base);
-      start.setHours(win.startHour, 0, 0, 0);
-      end = new Date(base);
-      if (win.endHour >= 24) {
-        end = addDays(base, 1);
-        end.setHours(0, 0, 0, 0);
-      } else {
-        end.setHours(win.endHour, 0, 0, 0);
-      }
-      if (!isWithinPlanWindow(start)) {
-        setError(`Day must be from today up to ${MAX_PLAN_DAYS} days ahead.`);
-        return;
-      }
-      timeLabel = `${base.toLocaleDateString("en-US", {
-        weekday: "long",
-      })} ${win.label.toLowerCase()}`;
+    const base = parseDateKey(day);
+    if (Number.isNaN(base.getTime())) {
+      setError("Pick a valid date.");
+      return;
     }
+    const timeMatch = /^(\d{2}):(\d{2})$/.exec(time.trim());
+    if (!timeMatch) {
+      setError("Pick a valid time.");
+      return;
+    }
+    const start = new Date(base);
+    start.setHours(Number(timeMatch[1]), Number(timeMatch[2]), 0, 0);
+    if (!isWithinPlanWindow(start)) {
+      setError(
+        `Time must be from now up to ${MAX_PLAN_DAYS} days ahead.`,
+      );
+      return;
+    }
+
+    const end = flexible
+      ? new Date(start.getTime() + 3 * 60 * 60 * 1000)
+      : new Date(start.getTime() + 90 * 60 * 1000);
+
+    const weekday = start.toLocaleDateString("en-US", { weekday: "long" });
+    const clock = formatClock(start.toISOString());
+    const timeLabel = flexible ? `${weekday} around ${clock}` : "";
 
     const seats =
       capacity.trim() !== "" ? Math.max(1, Number(capacity)) : null;
     if (capacity.trim() !== "" && Number.isNaN(seats)) {
       setError("Seats must be a number, or leave blank.");
-      return;
-    }
-
-    const meet = formatPlaceName(meetingPoint);
-    if (meet && meet.length > 64) {
-      setError("Meeting point must be 64 characters or fewer.");
       return;
     }
 
@@ -168,10 +144,10 @@ export function CreateTripModal({
       destination: to.value,
       startsAt: start.toISOString(),
       endsAt: end.toISOString(),
-      timePrecision: precision,
+      timePrecision: flexible ? "flexible" : "exact",
       timeLabel,
       transport: [...transport],
-      meetingPoint: meet,
+      meetingPoint: "",
       notes: notes.trim(),
       host,
       riders: [],
@@ -181,12 +157,13 @@ export function CreateTripModal({
 
     onCreate(trip);
     onClose();
+    const next = defaultWhen();
     setNotes("");
-    setMeetingPoint("");
     setCapacity("");
     setTransport(["car"]);
-    setDetailsOpen(false);
-    setStartsAt(defaultExactLocal());
+    setFlexible(false);
+    setDay(next.day);
+    setTime(next.time);
     setError(null);
   }
 
@@ -208,7 +185,7 @@ export function CreateTripModal({
               Post a trip
             </h2>
             <p className="mt-1 text-sm text-[var(--iron-500)]">
-              From → to, when, how you&apos;re going. Optional seats.
+              Route, when, and notes. Type any place — suggestions help.
             </p>
           </div>
           <button
@@ -224,13 +201,13 @@ export function CreateTripModal({
         <div className="space-y-3">
           <div>
             <p className="mb-1.5 text-sm font-medium text-[var(--ns-ink)]">
-              Route
+              Popular routes
             </p>
             <div className="flex flex-wrap gap-1.5">
               {CORRIDOR_PRESETS.map((preset) => {
                 const active =
-                  source === preset.source &&
-                  destination === preset.destination;
+                  placeEquals(source, preset.source) &&
+                  placeEquals(destination, preset.destination);
                 return (
                   <button
                     key={preset.id}
@@ -251,105 +228,68 @@ export function CreateTripModal({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="From">
-              <select
-                value={source}
-                onChange={(e) => setSource(e.target.value as TripLocation)}
-                className="field-input"
-              >
-                {LOCATIONS.map((loc) => (
-                  <option key={loc} value={loc}>
-                    {loc}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="To">
-              <select
-                value={destination}
-                onChange={(e) => setDestination(e.target.value as TripLocation)}
-                className="field-input"
-              >
-                {LOCATIONS.map((loc) => (
-                  <option key={loc} value={loc}>
-                    {loc}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <PlaceAutocomplete
+              id="trip-from"
+              label="From"
+              value={source}
+              onChange={setSource}
+              suggestions={suggestions}
+              placeholder="Network School"
+            />
+            <PlaceAutocomplete
+              id="trip-to"
+              label="To"
+              value={destination}
+              onChange={setDestination}
+              suggestions={suggestions}
+              placeholder="Changi Airport"
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-[var(--iron-100)] p-1">
-            {(
-              [
-                ["exact", "Exact time"],
-                ["flexible", "Flexible window"],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setPrecision(value)}
-                className={[
-                  "rounded-full px-3 py-2 text-sm font-semibold transition",
-                  precision === value
-                    ? "bg-white text-[var(--ns-ink)] shadow-sm"
-                    : "text-[var(--iron-500)]",
-                ].join(" ")}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {precision === "exact" ? (
-            <Field label="When">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Date">
               <input
-                type="datetime-local"
-                value={startsAt}
-                min={minDate}
-                max={maxDate}
-                onChange={(e) => setStartsAt(e.target.value)}
+                type="date"
+                value={day}
+                min={minDay}
+                max={maxDay}
+                onChange={(e) => setDay(e.target.value)}
                 required
                 className="field-input"
               />
             </Field>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Day">
-                <input
-                  type="date"
-                  value={day}
-                  min={minDay}
-                  max={maxDay}
-                  onChange={(e) => setDay(e.target.value)}
-                  required
-                  className="field-input"
-                />
-              </Field>
-              <Field label="Window">
-                <select
-                  value={windowId}
-                  onChange={(e) => setWindowId(e.target.value as TimeWindow)}
-                  className="field-input"
-                >
-                  {TIME_WINDOWS.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-          )}
+            <Field label="Time">
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                required
+                className="field-input"
+              />
+            </Field>
+          </div>
+
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-[var(--iron-200)] bg-[var(--iron-50)] px-3 py-2.5 text-sm">
+            <input
+              type="checkbox"
+              checked={flexible}
+              onChange={(e) => setFlexible(e.target.checked)}
+              className="h-4 w-4 accent-[var(--ns-ink)]"
+            />
+            <span>
+              <span className="font-medium text-[var(--ns-ink)]">
+                Time is flexible
+              </span>
+              <span className="mt-0.5 block text-xs text-[var(--iron-500)]">
+                Treat the clock time as approximate — around then is fine.
+              </span>
+            </span>
+          </label>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
             <div>
               <p className="mb-1.5 text-sm font-medium text-[var(--ns-ink)]">
                 Transport
-              </p>
-              <p className="mb-2 text-xs text-[var(--iron-400)]">
-                One, both (either fine), or none.
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {TRANSPORT_MODES.map((mode) => {
@@ -385,36 +325,15 @@ export function CreateTripModal({
             </Field>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setDetailsOpen((v) => !v)}
-            className="text-sm font-semibold text-[var(--iron-500)] hover:text-[var(--ns-ink)]"
-            aria-expanded={detailsOpen}
-          >
-            {detailsOpen ? "Hide optional details" : "+ Optional details"}
-          </button>
-
-          {detailsOpen ? (
-            <div className="space-y-3 rounded-xl bg-[var(--iron-50)] p-3">
-              <Field label="Notes">
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  placeholder="Bags ok · share Grab · landing 30th night…"
-                  className="field-input resize-none"
-                />
-              </Field>
-              <Field label="Meeting point">
-                <input
-                  value={meetingPoint}
-                  onChange={(e) => setMeetingPoint(e.target.value)}
-                  placeholder="NS Lobby, T3 Arrival…"
-                  className="field-input"
-                />
-              </Field>
-            </div>
-          ) : null}
+          <Field label="Notes">
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Details — meet at NS Gate, bags ok, share Grab, landing window…"
+              className="field-input resize-none"
+            />
+          </Field>
         </div>
 
         {error ? (

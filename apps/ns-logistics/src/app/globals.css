@@ -96,7 +96,7 @@ body {
 
 /* ——— Ride board list ——— */
 
-.trip-board {
+.trip-day-card {
   border: 1px solid var(--iron-200);
   border-radius: 1rem;
   background: #fff;
@@ -104,7 +104,7 @@ body {
 }
 
 .trip-day {
-  padding: 1.15rem var(--row-pad-x) 0.55rem;
+  padding: 1.1rem var(--row-pad-x) 0.65rem;
   font-family: var(--font-display), Georgia, "Times New Roman", serif;
   font-size: 1.25rem;
   font-weight: 600;
@@ -112,15 +112,9 @@ body {
   text-transform: none;
   color: var(--ns-ink);
   background: #fff;
-  border-top: 1px solid var(--iron-100);
 }
 
-.trip-board > div:first-child > .trip-day {
-  border-top: 0;
-}
-
-.trip-day + .trip-row,
-.trip-row + .trip-row {
+.trip-day-list .trip-row + .trip-row {
   border-top: 1px solid var(--iron-100);
 }
 
