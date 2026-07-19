@@ -192,7 +192,28 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-[var(--ns-ink)]">Trips</p>
+            <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-[var(--iron-200)]">
+              {(
+                [
+                  [false, "All"],
+                  [true, "My Rides"],
+                ] as const
+              ).map(([mineOnly, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => updateFilters({ myTripsOnly: mineOnly })}
+                  className={[
+                    "rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                    filters.myTripsOnly === mineOnly
+                      ? "bg-[var(--ns-ink)] text-white"
+                      : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
+                  ].join(" ")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-[var(--iron-200)]">
               {(
                 [
@@ -253,14 +274,6 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                   {label}
                 </Chip>
               ))}
-              <Chip
-                active={filters.myTripsOnly}
-                onClick={() =>
-                  updateFilters({ myTripsOnly: !filters.myTripsOnly })
-                }
-              >
-                Mine
-              </Chip>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
