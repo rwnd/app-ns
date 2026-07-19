@@ -5,15 +5,10 @@ import { useTrips } from "@/components/logistics/trips-provider";
 import { tripCorridor } from "@/lib/trips/constants";
 import { formatDayLabel, parseDateKey, toDateKey } from "@/lib/trips/dates";
 import { computeStats, isTripExpired } from "@/lib/trips/filter";
+import { KNOWN_PLACES } from "@/lib/trips/places";
 import type { TripLocation } from "@/lib/trips/types";
 
-const PLACES: TripLocation[] = [
-  "Network School",
-  "Changi Airport",
-  "Singapore",
-  "JB Sentral",
-  "Eco Botanica",
-];
+const PLACES: TripLocation[] = [...KNOWN_PLACES];
 
 /**
  * Counts + corridor/place volume — not a geo map (5 fixed hubs).

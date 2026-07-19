@@ -9,11 +9,12 @@ import {
   DISCORD_THREADS_MOCK_ONLY,
   discordThreadTitle,
 } from "@/lib/trips/discord";
+import { listPopularPlaces } from "@/lib/trips/db";
 import { formatDayLabel, parseDateKey, upcomingDayChips } from "@/lib/trips/dates";
 import { filterTrips, groupTripsByDay, isJoinable } from "@/lib/trips/filter";
+import { placeEquals, POPULAR_PLACE_MAX } from "@/lib/trips/places";
 import type {
   TransportMode,
-  TripCorridor,
   TripFilters,
   TripPerson,
   TripStatus,
@@ -29,7 +30,7 @@ type LogisticsHomeProps = {
 
 const defaultFilters: TripFilters = {
   query: "",
-  corridor: "all",
+  place: null,
   transport: "all",
   selectedDate: null,
   timeMode: "upcoming",
@@ -50,6 +51,11 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
 
   const now = useMemo(() => new Date(), []);
   const dayChips = useMemo(() => upcomingDayChips(3, now), [now]);
+  /** Top 3–5 places grepped from the trip store (case-sensitive keys). */
+  const popular = useMemo(
+    () => listPopularPlaces(trips, POPULAR_PLACE_MAX),
+    [trips],
+  );
   const visibleTrips = useMemo(
     () => filterTrips(trips, filters, user.id, now),
     [trips, filters, user.id, now],
@@ -139,9 +145,12 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     setDiscordPrompt(null);
   }
 
-  function toggleCorridor(value: TripCorridor) {
+  function togglePlace(place: string) {
     updateFilters({
-      corridor: filters.corridor === value ? "all" : value,
+      place:
+        filters.place !== null && placeEquals(filters.place, place)
+          ? null
+          : place,
     });
   }
 
@@ -213,21 +222,22 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
               <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--iron-400)]">
                 Popular
               </span>
-              {(
-                [
-                  ["airport", "Airport"],
-                  ["singapore", "Singapore"],
-                  ["local", "Local"],
-                ] as const
-              ).map(([value, label]) => (
-                <Chip
-                  key={value}
-                  active={filters.corridor === value}
-                  onClick={() => toggleCorridor(value)}
-                >
-                  {label}
-                </Chip>
-              ))}
+              {popular.length === 0 ? (
+                <span className="text-sm text-[var(--iron-400)]">No places yet</span>
+              ) : (
+                popular.map(({ place, count }) => (
+                  <Chip
+                    key={place}
+                    active={
+                      filters.place !== null && placeEquals(filters.place, place)
+                    }
+                    onClick={() => togglePlace(place)}
+                  >
+                    {place}
+                    <span className="ml-1 tabular-nums opacity-60">{count}</span>
+                  </Chip>
+                ))
+              )}
               <span className="mx-0.5 hidden h-4 w-px bg-[var(--iron-200)] sm:block" />
               {(
                 [

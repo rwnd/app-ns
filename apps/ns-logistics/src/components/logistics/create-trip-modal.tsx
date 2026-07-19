@@ -17,6 +17,11 @@ import {
   toDateKey,
 } from "@/lib/trips/dates";
 import { isWithinPlanWindow } from "@/lib/trips/filter";
+import {
+  formatPlaceName,
+  parsePlaceName,
+  placeEquals,
+} from "@/lib/trips/places";
 import type {
   TimePrecision,
   TimeWindow,
@@ -86,7 +91,17 @@ export function CreateTripModal({
     e.preventDefault();
     setError(null);
 
-    if (source === destination) {
+    const from = parsePlaceName(source);
+    if (!from.ok) {
+      setError(`From: ${from.error}`);
+      return;
+    }
+    const to = parsePlaceName(destination);
+    if (!to.ok) {
+      setError(`To: ${to.error}`);
+      return;
+    }
+    if (placeEquals(from.value, to.value)) {
       setError("Source and destination must be different.");
       return;
     }
@@ -140,17 +155,23 @@ export function CreateTripModal({
       return;
     }
 
+    const meet = formatPlaceName(meetingPoint);
+    if (meet && meet.length > 64) {
+      setError("Meeting point must be 64 characters or fewer.");
+      return;
+    }
+
     const trip: Trip = {
       id: `t-${Date.now()}`,
       status: "open",
-      source,
-      destination,
+      source: from.value,
+      destination: to.value,
       startsAt: start.toISOString(),
       endsAt: end.toISOString(),
       timePrecision: precision,
       timeLabel,
       transport: [...transport],
-      meetingPoint: meetingPoint.trim(),
+      meetingPoint: meet,
       notes: notes.trim(),
       host,
       riders: [],

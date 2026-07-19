@@ -1,7 +1,6 @@
 import {
   MAX_PLAN_DAYS,
   PAST_VISIBLE_DAYS,
-  tripCorridor,
 } from "@/lib/trips/constants";
 import {
   addDays,
@@ -10,6 +9,7 @@ import {
   startOfDay,
   toDateKey,
 } from "@/lib/trips/dates";
+import { tripTouchesPlace } from "@/lib/trips/places";
 import type { Trip, TripFilters, TripStats } from "@/lib/trips/types";
 
 export function tripEffectiveEnd(trip: Trip): Date {
@@ -146,10 +146,9 @@ export function filterTrips(
 
     if (!matchesQuery(trip, filters.query)) return false;
 
-    if (filters.corridor !== "all") {
-      if (tripCorridor(trip.source, trip.destination) !== filters.corridor) {
-        return false;
-      }
+    if (filters.place) {
+      // Case-sensitive regex equality on source/destination (see placeEquals).
+      if (!tripTouchesPlace(trip, filters.place)) return false;
     }
 
     if (filters.transport !== "all") {

@@ -1,6 +1,6 @@
+import { KNOWN_PLACES, placeEquals } from "@/lib/trips/places";
 import type {
   TimeWindow,
-  TransportMode,
   TripCorridor,
   TripLocation,
 } from "@/lib/trips/types";
@@ -8,18 +8,13 @@ import type {
 export const MAX_PLAN_DAYS = 45;
 export const PAST_VISIBLE_DAYS = 7;
 
-export const TRANSPORT_MODES: { id: TransportMode; label: string }[] = [
+export const TRANSPORT_MODES: { id: "car" | "bus"; label: string }[] = [
   { id: "car", label: "Car" },
   { id: "bus", label: "Bus" },
 ];
 
-export const LOCATIONS: TripLocation[] = [
-  "Network School",
-  "Changi Airport",
-  "Eco Botanica",
-  "Singapore",
-  "JB Sentral",
-];
+/** Select / preset catalog — same as KNOWN_PLACES. */
+export const LOCATIONS: TripLocation[] = [...KNOWN_PLACES];
 
 /** One-tap corridors that match real Discord traffic. */
 export const CORRIDOR_PRESETS: {
@@ -92,10 +87,16 @@ export function tripCorridor(
   source: TripLocation,
   destination: TripLocation,
 ): TripCorridor {
-  if (source === "Changi Airport" || destination === "Changi Airport") {
+  if (
+    placeEquals(source, "Changi Airport") ||
+    placeEquals(destination, "Changi Airport")
+  ) {
     return "airport";
   }
-  if (source === "Singapore" || destination === "Singapore") {
+  if (
+    placeEquals(source, "Singapore") ||
+    placeEquals(destination, "Singapore")
+  ) {
     return "singapore";
   }
   return "local";

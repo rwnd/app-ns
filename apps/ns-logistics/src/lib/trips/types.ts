@@ -4,12 +4,8 @@ export type TripPerson = {
   image?: string | null;
 };
 
-export type TripLocation =
-  | "Network School"
-  | "Changi Airport"
-  | "Eco Botanica"
-  | "Singapore"
-  | "JB Sentral";
+/** Validated place label (see parsePlaceName). Not a free-form blob. */
+export type TripLocation = string;
 
 /**
  * open — tentative; time may still move
@@ -72,7 +68,11 @@ export type TimeMode = "upcoming" | "past";
 
 export type TripFilters = {
   query: string;
-  corridor: TripCorridor | "all";
+  /**
+   * Popular place chip — case-sensitive exact place name, or null for any.
+   * Matched with anchored RegExp (no `i` flag) against source/destination.
+   */
+  place: string | null;
   /** Filter to trips that include this mode. "all" = any. */
   transport: TransportMode | "all";
   /** YYYY-MM-DD or null for any day */
