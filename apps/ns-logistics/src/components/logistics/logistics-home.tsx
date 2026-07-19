@@ -178,7 +178,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="inline-flex h-10 items-center justify-center rounded-full bg-[var(--ns-ink)] px-4 text-sm font-semibold text-white hover:bg-[#1f2937]"
+              className="inline-flex h-11 min-w-[6.5rem] items-center justify-center rounded-full bg-[var(--ns-ink)] px-6 text-base font-semibold text-white hover:bg-[#1f2937]"
             >
               + Post
             </button>
@@ -283,7 +283,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="mt-4 rounded-full bg-[var(--ns-ink)] px-4 py-2 text-sm font-semibold text-white"
+                className="mt-4 inline-flex min-w-[6.5rem] items-center justify-center rounded-full bg-[var(--ns-ink)] px-6 py-2.5 text-base font-semibold text-white"
               >
                 + Post
               </button>
