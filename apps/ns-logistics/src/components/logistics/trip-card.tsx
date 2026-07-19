@@ -52,13 +52,15 @@ export function TripCard({
   const isHost = trip.host.id === currentUserId;
   const joined = trip.riders.some((g) => g.id === currentUserId);
   const showJoinControl = !isPast && !isHost && (joined || isJoinable(trip));
-  const goingCount = trip.riders.length;
+  // Host is always going — riders are everyone else who joined.
+  const party = [trip.host, ...trip.riders];
+  const goingCount = party.length;
   const seats = seatsLine(trip);
   const transport = formatTransport(trip.transport);
   const chip = tripStatusChip(trip);
   const timePrefix = formatTripTimePrefix(trip);
-  const visibleRiders = trip.riders.slice(0, 3);
-  const overflow = Math.max(trip.riders.length - visibleRiders.length, 0);
+  const visibleParty = party.slice(0, 3);
+  const overflow = Math.max(party.length - visibleParty.length, 0);
 
   const showDiscord =
     !isPast && (Boolean(trip.discordThreadUrl) || isHost);

@@ -143,7 +143,7 @@ export function StatsPanel() {
                   </span>
                   <span className="text-[var(--iron-500)]">
                     {formatDayLabel(parseDateKey(toDateKey(new Date(trip.startsAt))), now)}{" "}
-                    · {trip.riders.length} went
+                    · {1 + trip.riders.length} went
                   </span>
                 </li>
               ))}
