@@ -146,9 +146,9 @@ export function formatDayLabel(date: Date, now = new Date()): string {
   );
   const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
 
-  if (diff === 0) return `Today ${weekday}`;
-  if (diff === 1) return `Tomorrow ${weekday}`;
-  if (diff === -1) return `Yesterday ${weekday}`;
+  if (diff === 0) return `Today · ${weekday}`;
+  if (diff === 1) return `Tomorrow · ${weekday}`;
+  if (diff === -1) return `Yesterday · ${weekday}`;
   return date.toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",

@@ -14,7 +14,6 @@ import { formatDayLabel, parseDateKey, upcomingDayChips } from "@/lib/trips/date
 import { filterTrips, groupTripsByDay, isJoinable } from "@/lib/trips/filter";
 import { placeEquals, POPULAR_PLACE_MAX } from "@/lib/trips/places";
 import type {
-  TransportMode,
   TripFilters,
   TripPerson,
   TripStatus,
@@ -154,12 +153,6 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     });
   }
 
-  function toggleTransport(value: TransportMode) {
-    updateFilters({
-      transport: filters.transport === value ? "all" : value,
-    });
-  }
-
   function toggleDay(key: string) {
     updateFilters({
       selectedDate: filters.selectedDate === key ? null : key,
@@ -191,29 +184,7 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-[var(--iron-200)]">
-              {(
-                [
-                  [false, "All"],
-                  [true, "My Rides"],
-                ] as const
-              ).map(([mineOnly, label]) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => updateFilters({ myTripsOnly: mineOnly })}
-                  className={[
-                    "rounded-full px-3 py-1.5 text-sm font-semibold transition",
-                    filters.myTripsOnly === mineOnly
-                      ? "bg-[var(--ns-ink)] text-white"
-                      : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
-                  ].join(" ")}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-[var(--iron-200)]">
               {(
                 [
@@ -229,6 +200,28 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                     "rounded-full px-3 py-1.5 text-sm font-semibold transition",
                     filters.timeMode === value
                       ? "bg-[var(--iron-100)] text-[var(--ns-ink)]"
+                      : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
+                  ].join(" ")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-[var(--iron-200)]">
+              {(
+                [
+                  [false, "All"],
+                  [true, "My Rides"],
+                ] as const
+              ).map(([mineOnly, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => updateFilters({ myTripsOnly: mineOnly })}
+                  className={[
+                    "rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                    filters.myTripsOnly === mineOnly
+                      ? "bg-[var(--ns-ink)] text-white"
                       : "text-[var(--iron-500)] hover:text-[var(--ns-ink)]",
                   ].join(" ")}
                 >
@@ -259,21 +252,6 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                   </Chip>
                 ))
               )}
-              <span className="mx-0.5 hidden h-4 w-px bg-[var(--iron-200)] sm:block" />
-              {(
-                [
-                  ["car", "Car"],
-                  ["bus", "Bus"],
-                ] as const
-              ).map(([value, label]) => (
-                <Chip
-                  key={value}
-                  active={filters.transport === value}
-                  onClick={() => toggleTransport(value)}
-                >
-                  {label}
-                </Chip>
-              ))}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">

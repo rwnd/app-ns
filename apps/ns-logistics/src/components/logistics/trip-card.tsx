@@ -57,117 +57,125 @@ export function TripCard({
   const transport = formatTransport(trip.transport);
   const chip = tripStatusChip(trip);
   const timePrefix = formatTripTimePrefix(trip);
-  // Match "N going": riders only — not the host.
   const visibleRiders = trip.riders.slice(0, 3);
   const overflow = Math.max(trip.riders.length - visibleRiders.length, 0);
 
+  const showDiscord =
+    !isPast && (Boolean(trip.discordThreadUrl) || isHost);
+
+  function toggleOpen() {
+    setOpen((v) => !v);
+  }
+
   return (
     <article className={`trip-row ${open ? "trip-row--open" : ""}`}>
-      <div className="flex items-start gap-3">
-        <button
-          type="button"
-          className="trip-row-main min-w-0 flex-1 text-left"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-        >
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="shrink-0 text-sm font-medium tabular-nums text-[var(--iron-500)]">
-              {timePrefix}
-            </span>
-            <h3 className="trip-route inline">
+      <div
+        className="trip-row-hit"
+        onClick={toggleOpen}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            toggleOpen();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+      >
+        <div className="trip-row-top">
+          <div className="trip-row-summary min-w-0 flex-1">
+            <span className="trip-time">{timePrefix}</span>
+            <h3 className="trip-route">
               <span>{trip.source}</span>
               <span className="trip-arrow" aria-hidden="true">
                 →
               </span>
               <span>{trip.destination}</span>
             </h3>
-            <span className="text-sm text-[var(--iron-500)]">
-              · {goingCount} going
-            </span>
+            <span className="trip-going">· {goingCount} going</span>
             <span className={`trip-status-chip trip-status-chip--${chip}`}>
               {CHIP_LABEL[chip]}
             </span>
           </div>
 
-          <div className="trip-people">
-            {goingCount > 0 ? (
-              <RiderStack people={visibleRiders} overflow={overflow} />
-            ) : (
-              <span className="trip-sub">
-                {isHost ? "Just you" : "No one yet"}
-              </span>
-            )}
-            {transport || seats || isHost || (joined && !isHost) ? (
-              <p className="trip-meta !mt-0">
-                {transport ? <span>{transport}</span> : null}
-                {transport && seats ? (
-                  <span className="trip-dot" aria-hidden="true" />
-                ) : null}
-                {seats ? <span>{seats}</span> : null}
-                {(transport || seats) && (isHost || (joined && !isHost)) ? (
-                  <span className="trip-dot" aria-hidden="true" />
-                ) : null}
-                {isHost ? (
-                  <span className="font-medium text-[var(--ns-ink)]">Yours</span>
-                ) : null}
-                {joined && !isHost ? (
-                  <span className="font-medium text-[var(--ns-ink)]">
-                    You&apos;re in
-                  </span>
-                ) : null}
-              </p>
-            ) : null}
-          </div>
-        </button>
-
-        <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5">
-          <button
-            type="button"
-            className="trip-row-caret"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? "Hide details" : "Show details"}
-            aria-expanded={open}
+          <div
+            className="trip-row-ctas"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
-            {open ? "▴" : "▾"}
-          </button>
+            {showJoinControl ? (
+              <button
+                type="button"
+                onClick={() => onToggleJoin(trip.id)}
+                className={joined ? "btn-secondary" : "btn-primary"}
+              >
+                {joined ? "Leave" : "I'm in"}
+              </button>
+            ) : null}
 
-          {showJoinControl ? (
-            <button
-              type="button"
-              onClick={() => onToggleJoin(trip.id)}
-              className={joined ? "btn-secondary" : "btn-primary"}
-            >
-              {joined ? "Leave" : "I'm in"}
-            </button>
+            {showDiscord && trip.discordThreadUrl ? (
+              <a
+                href={trip.discordThreadUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-discord-chip"
+                title={
+                  DISCORD_THREADS_MOCK_ONLY
+                    ? "Open Discord thread (mock)"
+                    : "Open Discord thread"
+                }
+              >
+                <DiscordIcon />
+                <span>Discord</span>
+              </a>
+            ) : null}
+
+            {showDiscord && !trip.discordThreadUrl && isHost ? (
+              <button
+                type="button"
+                onClick={() => onShareDiscord(trip.id)}
+                className="btn-discord-chip"
+                title="Attach mock Discord thread"
+              >
+                <DiscordIcon />
+                <span>Discord</span>
+              </button>
+            ) : null}
+
+            {isPast ? <span className="trip-ended">Ended</span> : null}
+
+            <span className="trip-row-caret" aria-hidden="true">
+              {open ? "▴" : "▾"}
+            </span>
+          </div>
+        </div>
+
+        <div className="trip-row-sub">
+          {goingCount > 0 ? (
+            <RiderStack people={visibleRiders} overflow={overflow} />
+          ) : (
+            <span className="trip-sub">
+              {isHost ? "Just you" : "No one yet"}
+            </span>
+          )}
+          {transport ? <span className="trip-sub">{transport}</span> : null}
+          {seats ? <span className="trip-sub">{seats}</span> : null}
+          {isHost ? (
+            <span className="trip-sub font-medium text-[var(--ns-ink)]">Yours</span>
           ) : null}
-
-          {!isPast && trip.discordThreadUrl ? (
-            <a
-              href={trip.discordThreadUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-link-discord"
-            >
-              Discord{DISCORD_THREADS_MOCK_ONLY ? " (mock)" : ""}
-            </a>
+          {joined && !isHost ? (
+            <span className="trip-sub font-medium text-[var(--ns-ink)]">
+              You&apos;re in
+            </span>
           ) : null}
-
-          {!isPast && isHost && !trip.discordThreadUrl ? (
-            <button
-              type="button"
-              onClick={() => onShareDiscord(trip.id)}
-              className="btn-discord"
-            >
-              Discord{DISCORD_THREADS_MOCK_ONLY ? " (mock)" : ""}
-            </button>
-          ) : null}
-
-          {isPast ? <span className="trip-ended">Ended</span> : null}
         </div>
       </div>
 
       {open ? (
-        <div className="trip-details">
+        <div
+          className="trip-details"
+          onClick={(event) => event.stopPropagation()}
+        >
           <p>
             <span className="trip-details-label">Host</span>
             {trip.host.name}
@@ -245,14 +253,16 @@ export function TripCard({
         </div>
       ) : null}
 
-      {joined && !isHost && !open ? (
-        <p className="trip-hint">
-          Discord mentions are opt-in — nothing posts unless you confirm.
-        </p>
-      ) : null}
-
       {flash ? <p className="trip-flash">{flash}</p> : null}
     </article>
+  );
+}
+
+function DiscordIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M20.3 4.4A16.8 16.8 0 0 0 15.9 3c-.2.4-.4.9-.6 1.3a15.4 15.4 0 0 0-6.6 0A10 10 0 0 0 8.1 3a16.7 16.7 0 0 0-4.4 1.4C.9 9.1.3 13.6.6 18.1A16.9 16.9 0 0 0 6 20.8c.4-.6.8-1.2 1.1-1.8-.6-.2-1.2-.5-1.7-.9.1-.1.3-.2.4-.3a11.9 11.9 0 0 0 10.4 0c.1.1.3.2.4.3-.5.4-1.1.7-1.7.9.3.6.7 1.2 1.1 1.8a16.8 16.8 0 0 0 5.4-2.7c.4-5-.7-9.5-3.1-13.7ZM8.7 15.3c-1 0-1.9-1-1.9-2.1 0-1.2.8-2.1 1.9-2.1s1.9 1 1.9 2.1c0 1.2-.8 2.1-1.9 2.1Zm6.6 0c-1 0-1.9-1-1.9-2.1 0-1.2.8-2.1 1.9-2.1s1.9 1 1.9 2.1c0 1.2-.9 2.1-1.9 2.1Z" />
+    </svg>
   );
 }
 
