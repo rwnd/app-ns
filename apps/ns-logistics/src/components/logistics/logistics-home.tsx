@@ -12,6 +12,7 @@ import {
 import { formatDayLabel, parseDateKey, upcomingDayChips } from "@/lib/trips/dates";
 import { filterTrips, groupTripsByDay, isJoinable } from "@/lib/trips/filter";
 import type {
+  TransportMode,
   TripCorridor,
   TripFilters,
   TripPerson,
@@ -29,6 +30,7 @@ type LogisticsHomeProps = {
 const defaultFilters: TripFilters = {
   query: "",
   corridor: "all",
+  transport: "all",
   selectedDate: null,
   timeMode: "upcoming",
   myTripsOnly: false,
@@ -143,6 +145,12 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
     });
   }
 
+  function toggleTransport(value: TransportMode) {
+    updateFilters({
+      transport: filters.transport === value ? "all" : value,
+    });
+  }
+
   function toggleDay(key: string) {
     updateFilters({
       selectedDate: filters.selectedDate === key ? null : key,
@@ -220,6 +228,29 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                   {label}
                 </Chip>
               ))}
+              <span className="mx-0.5 hidden h-4 w-px bg-[var(--iron-200)] sm:block" />
+              {(
+                [
+                  ["car", "Car"],
+                  ["bus", "Bus"],
+                ] as const
+              ).map(([value, label]) => (
+                <Chip
+                  key={value}
+                  active={filters.transport === value}
+                  onClick={() => toggleTransport(value)}
+                >
+                  {label}
+                </Chip>
+              ))}
+              <Chip
+                active={filters.myTripsOnly}
+                onClick={() =>
+                  updateFilters({ myTripsOnly: !filters.myTripsOnly })
+                }
+              >
+                Mine
+              </Chip>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -235,14 +266,6 @@ export function LogisticsHome({ user }: LogisticsHomeProps) {
                   {chip.label}
                 </Chip>
               ))}
-              <Chip
-                active={filters.myTripsOnly}
-                onClick={() =>
-                  updateFilters({ myTripsOnly: !filters.myTripsOnly })
-                }
-              >
-                Mine
-              </Chip>
             </div>
           </div>
         </div>

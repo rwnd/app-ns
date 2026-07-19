@@ -322,33 +322,46 @@ export function CreateTripModal({
             </div>
           )}
 
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-[var(--ns-ink)]">
-              Transport
-            </p>
-            <p className="mb-2 text-xs text-[var(--iron-400)]">
-              Pick one or both — both means either is fine. Leave none if open.
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {TRANSPORT_MODES.map((mode) => {
-                const active = transport.includes(mode.id);
-                return (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    onClick={() => toggleTransport(mode.id)}
-                    className={[
-                      "rounded-full px-3 py-1.5 text-sm font-semibold transition",
-                      active
-                        ? "bg-[var(--ns-ink)] text-white"
-                        : "bg-white text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-[var(--iron-50)]",
-                    ].join(" ")}
-                  >
-                    {mode.label}
-                  </button>
-                );
-              })}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-[var(--ns-ink)]">
+                Transport
+              </p>
+              <p className="mb-2 text-xs text-[var(--iron-400)]">
+                One, both (either fine), or none.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {TRANSPORT_MODES.map((mode) => {
+                  const active = transport.includes(mode.id);
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => toggleTransport(mode.id)}
+                      className={[
+                        "rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                        active
+                          ? "bg-[var(--ns-ink)] text-white"
+                          : "bg-white text-[var(--ns-ink)] ring-1 ring-[var(--iron-200)] hover:bg-[var(--iron-50)]",
+                      ].join(" ")}
+                    >
+                      {mode.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+            <Field label="Seats">
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                placeholder="No limit"
+                className="field-input sm:w-28"
+              />
+            </Field>
           </div>
 
           <button
@@ -362,17 +375,6 @@ export function CreateTripModal({
 
           {detailsOpen ? (
             <div className="space-y-3 rounded-xl bg-[var(--iron-50)] p-3">
-              <Field label="Seats">
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={capacity}
-                  onChange={(e) => setCapacity(e.target.value)}
-                  placeholder="Blank = no limit"
-                  className="field-input"
-                />
-              </Field>
               <Field label="Notes">
                 <textarea
                   value={notes}
@@ -393,12 +395,6 @@ export function CreateTripModal({
             </div>
           ) : null}
         </div>
-
-        <p className="mt-3 text-xs text-[var(--iron-400)]">
-          Discord is optional. For now, “Discord” only attaches a{" "}
-          <span className="font-semibold text-[var(--ns-ink)]">mock thread</span>{" "}
-          link — nothing is posted to a real channel.
-        </p>
 
         {error ? (
           <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">

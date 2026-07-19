@@ -5,6 +5,7 @@ import { TripsProvider } from "@/components/logistics/trips-provider";
 
 type BoardShellProps = {
   user: {
+    id?: string | null;
     name?: string | null;
     image?: string | null;
     email?: string | null;
@@ -21,8 +22,17 @@ export function BoardShell({
   banner,
   children,
 }: BoardShellProps) {
+  const seedUser =
+    basePath === "/preview" && user.id
+      ? {
+          id: user.id,
+          name: user.name ?? "You",
+          image: user.image,
+        }
+      : null;
+
   return (
-    <TripsProvider>
+    <TripsProvider seedUser={seedUser}>
       {banner}
       <AppTopbar user={user} basePath={basePath} />
       {children}

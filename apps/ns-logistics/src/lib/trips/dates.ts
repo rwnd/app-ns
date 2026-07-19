@@ -72,19 +72,26 @@ export function formatClock(iso: string): string {
   });
 }
 
-/** Compact time for board prefix — flexible trips use short window label. */
+const TIME_WINDOW_WORDS = ["morning", "afternoon", "evening", "night"] as const;
+
+/** Compact time for board prefix — flexible trips use a window word, not the last token. */
 export function formatTripTimePrefix(trip: {
   startsAt: string;
   timePrecision: "exact" | "flexible";
   timeLabel: string;
 }): string {
   if (trip.timePrecision === "flexible") {
-    const label = trip.timeLabel.trim();
-    if (label) {
-      // Prefer last word of window: "Saturday evening" → "Evening"
-      const parts = label.split(/\s+/);
-      const last = parts[parts.length - 1] ?? label;
-      return last.charAt(0).toUpperCase() + last.slice(1);
+    const lower = trip.timeLabel.trim().toLowerCase();
+    if (lower) {
+      const hit = TIME_WINDOW_WORDS.map((word) => ({
+        word,
+        index: lower.indexOf(word),
+      }))
+        .filter((item) => item.index >= 0)
+        .sort((a, b) => a.index - b.index)[0];
+      if (hit) {
+        return hit.word.charAt(0).toUpperCase() + hit.word.slice(1);
+      }
     }
     return "Flex";
   }

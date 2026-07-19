@@ -28,7 +28,12 @@ const people = {
   hari: person("u10", "hari2184", 0x0f766e),
 };
 
-export function createMockTrips(now = new Date()): Trip[] {
+type MockOptions = {
+  /** Attach this user as host of one trip + rider on another (preview Mine). */
+  seedUser?: TripPerson;
+};
+
+export function createMockTrips(now = new Date(), options: MockOptions = {}): Trip[] {
   const today = startOfDay(now);
   const tomorrow = addDays(today, 1);
   const inTwo = addDays(today, 2);
@@ -237,6 +242,19 @@ export function createMockTrips(now = new Date()): Trip[] {
     capacity: 5,
     discordThreadUrl: null,
   });
+
+  if (options.seedUser) {
+    const seed = options.seedUser;
+    for (const trip of trips) {
+      if (trip.id === "t-today-eco") {
+        trip.host = seed;
+      }
+      if (trip.id === "t-tomorrow-return") {
+        const already = trip.riders.some((r) => r.id === seed.id);
+        if (!already) trip.riders = [...trip.riders, seed];
+      }
+    }
+  }
 
   return trips;
 }

@@ -26,8 +26,16 @@ type TripsContextValue = {
 
 const TripsContext = createContext<TripsContextValue | null>(null);
 
-export function TripsProvider({ children }: { children: React.ReactNode }) {
-  const [trips, setTrips] = useState<Trip[]>(() => createMockTrips());
+type TripsProviderProps = {
+  children: React.ReactNode;
+  /** Preview: seed board so Mine has hosted + joined trips. */
+  seedUser?: TripPerson | null;
+};
+
+export function TripsProvider({ children, seedUser = null }: TripsProviderProps) {
+  const [trips, setTrips] = useState<Trip[]>(() =>
+    createMockTrips(new Date(), seedUser ? { seedUser } : {}),
+  );
 
   const addTrip = useCallback((trip: Trip) => {
     setTrips((prev) => [trip, ...prev]);

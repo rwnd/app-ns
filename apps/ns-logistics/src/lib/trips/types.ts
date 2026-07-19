@@ -73,6 +73,8 @@ export type TimeMode = "upcoming" | "past";
 export type TripFilters = {
   query: string;
   corridor: TripCorridor | "all";
+  /** Filter to trips that include this mode. "all" = any. */
+  transport: TransportMode | "all";
   /** YYYY-MM-DD or null for any day */
   selectedDate: string | null;
   timeMode: TimeMode;

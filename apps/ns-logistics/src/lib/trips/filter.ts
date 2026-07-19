@@ -152,6 +152,10 @@ export function filterTrips(
       }
     }
 
+    if (filters.transport !== "all") {
+      if (!trip.transport.includes(filters.transport)) return false;
+    }
+
     if (selected) {
       if (
         startOfDay(new Date(trip.startsAt)).getTime() !==

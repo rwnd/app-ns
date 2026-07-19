@@ -93,13 +93,29 @@ export function TripCard({
             {goingCount > 0 ? (
               <RiderStack people={visibleRiders} overflow={overflow} />
             ) : (
-              <span className="trip-sub">No one yet</span>
+              <span className="trip-sub">
+                {isHost ? "Just you" : "No one yet"}
+              </span>
             )}
-            {transport ? <span className="trip-sub">{transport}</span> : null}
-            {seats ? <span className="trip-sub">{seats}</span> : null}
-            {isHost ? <span className="trip-sub font-medium text-[var(--ns-ink)]">Yours</span> : null}
-            {joined && !isHost ? (
-              <span className="trip-sub font-medium text-[var(--ns-ink)]">You&apos;re in</span>
+            {transport || seats || isHost || (joined && !isHost) ? (
+              <p className="trip-meta !mt-0">
+                {transport ? <span>{transport}</span> : null}
+                {transport && seats ? (
+                  <span className="trip-dot" aria-hidden="true" />
+                ) : null}
+                {seats ? <span>{seats}</span> : null}
+                {(transport || seats) && (isHost || (joined && !isHost)) ? (
+                  <span className="trip-dot" aria-hidden="true" />
+                ) : null}
+                {isHost ? (
+                  <span className="font-medium text-[var(--ns-ink)]">Yours</span>
+                ) : null}
+                {joined && !isHost ? (
+                  <span className="font-medium text-[var(--ns-ink)]">
+                    You&apos;re in
+                  </span>
+                ) : null}
+              </p>
             ) : null}
           </div>
         </button>
